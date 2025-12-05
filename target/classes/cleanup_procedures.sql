@@ -1,0 +1,11 @@
+DROP PROCEDURE IF EXISTS sp_empleado_actualizar;
+DROP PROCEDURE IF EXISTS sp_empleado_cambiar_pass;
+DROP PROCEDURE IF EXISTS sp_empleado_eliminar;
+DROP PROCEDURE IF EXISTS sp_empleado_listar;
+DROP PROCEDURE IF EXISTS sp_empleado_obtener;
+DROP PROCEDURE IF EXISTS sp_empleado_registrar;
+DROP PROCEDURE IF EXISTS sp_listar_asistencias_admin;
+DROP PROCEDURE IF EXISTS sp_listar_asistencias_empleado;
+DROP PROCEDURE IF EXISTS sp_marcar_asistencia;
+DROP PROCEDURE IF EXISTS sp_obtener_proximo_turno;
+DROP PROCEDURE IF EXISTS sp_validar_login;

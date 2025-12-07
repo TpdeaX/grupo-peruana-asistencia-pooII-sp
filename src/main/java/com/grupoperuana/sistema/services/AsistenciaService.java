@@ -1,13 +1,12 @@
 package com.grupoperuana.sistema.services;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.ArrayList;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.Comparator;
 
 import org.springframework.stereotype.Service;
 
@@ -32,6 +31,11 @@ public class AsistenciaService {
         this.empleadoRepository = empleadoRepository;
         this.horarioRepository = horarioRepository;
     }
+    
+    // --- MÉTODO NUEVO: PUENTE PARA EL CONTROLLER ---
+    public boolean verificarSiMarcoHoy(int empleadoId) {
+        return asistenciaRepository.existsByEmpleadoIdAndFecha(empleadoId, LocalDate.now());
+    }
 
     public List<Asistencia> listarTodo() {
         return asistenciaRepository.findAllByOrderByFechaDescHoraEntradaDesc();
@@ -43,8 +47,7 @@ public class AsistenciaService {
 
     public String marcarAsistencia(int idEmpleado, String modo, double lat, double lon, String observacion) {
         LocalDate hoy = LocalDate.now();
-        Optional<Asistencia> abierta = asistenciaRepository.findByEmpleadoIdAndFechaAndHoraSalidaIsNull(idEmpleado,
-                hoy);
+        Optional<Asistencia> abierta = asistenciaRepository.findByEmpleadoIdAndFechaAndHoraSalidaIsNull(idEmpleado, hoy);
 
         if (abierta.isPresent()) {
             Asistencia a = abierta.get();
@@ -52,10 +55,11 @@ public class AsistenciaService {
             asistenciaRepository.save(a);
             return "SALIDA";
         } else {
+          
+            
             Asistencia a = new Asistencia();
             Empleado e = empleadoRepository.findById(idEmpleado).orElse(null);
-            if (e == null)
-                return "ERROR";
+            if (e == null) return "ERROR";
 
             a.setEmpleado(e);
             a.setFecha(hoy);
@@ -80,70 +84,19 @@ public class AsistenciaService {
         List<Asistencia> asistencias = asistenciaRepository.findByEmpleadoIdAndFecha(empleadoId, hoy);
         List<TurnoDTO> reporte = new ArrayList<>();
 
-        // Ordenar horarios por hora de inicio
-        // Ordenar horarios por hora de inicio
         horarios.sort(Comparator.comparing(Horario::getHoraInicio));
-
-        // Mantener registro de asistencias ya asignadas para no repetirlas
         List<Integer> asistenciasAsignadas = new ArrayList<>();
 
         for (Horario h : horarios) {
             Asistencia asistenciaEncontrada = null;
 
-            // Buscar la mejor coincidencia de asistencia para este turno
             for (Asistencia a : asistencias) {
-                if (asistenciasAsignadas.contains(a.getId())) {
-                    continue;
-                }
+                if (asistenciasAsignadas.contains(a.getId())) continue;
 
-                // Lógica mejorada:
-                // 1. La asistencia debe ser ANTES del fin del turno (obvio)
-                // 2. La asistencia debe ser DESPUÉS de un tiempo razonable antes del inicio
-                // (ej. 4 horas)
-                // o simplemente buscamos la primera disponible que tenga sentido cronológico.
-                // Al estar ordenados los turnos, si asignamos una asistencia al primer turno,
-                // el segundo turno buscará en las restantes.
-
-                // Ventana de búsqueda: Desde 4 horas antes del inicio hasta el fin del turno.
-                LocalTime ventanaInicio = h.getHoraInicio().minusHours(4);
                 LocalTime ventanaFin = h.getHoraFin();
-
-                // Manejo de cruce de medianoche (si fuera necesario, pero por ahora simple)
-                // Asumimos turnos en el mismo día por la lógica de 'hoy'.
-
-                boolean dentroDeRango = false;
-                if (ventanaInicio.isAfter(ventanaFin)) {
-                    // Caso raro donde ventana inicio cruza medianoche hacia atrás en el mismo día?
-                    // No, LocalTime.minusHours ajusta. Pero si es 08:00 - 4h = 04:00.
-                    // Si turno es 01:00 - 4h = 21:00 (del día anterior).
-                    // Pero estamos filtrando asistencias por FECHA 'hoy'.
-                    // Así que solo nos importa desde 00:00.
-                    // Si ventanaInicio > horaInicio (por wrap around), lo tratamos como 00:00.
-                }
-
-                // Simplificación: Si la asistencia es del mismo día, verificamos hora.
-                // Si hora entrada está entre ventanaInicio y ventanaFin.
-                // Ojo: Si ventanaInicio es "ayer" (ej 23:00), y asistencia es hoy 07:00,
-                // LocalTime 23:00 > 07:00.
-
-                // Para simplificar y dado que filtramos por FECHA = HOY:
-                // Solo miramos si es antes del fin del turno.
-                // Y para evitar tomar asistencias de turnos MUY anteriores que se olvidaron
-                // marcar salida,
-                // ponemos un límite razonable, pero la clave es el orden y no repetir.
-
                 if (a.getHoraEntrada().isBefore(ventanaFin)) {
-                    // Si es la primera que encontramos no asignada y es anterior al fin del turno,
-                    // es candidata. Pero verifiquemos que no sea "demasiado" temprano si hay otro
-                    // turno antes.
-                    // Pero como ya procesamos los turnos anteriores y asignamos sus asistencias,
-                    // esta debería ser la correcta para ESTE turno.
-
-                    // Un check extra: que no sea más de 4 horas antes del inicio,
-                    // para no agarrar una asistencia de la mañana para el turno de la noche si el
-                    // de la mañana faltó.
                     long diffHoras = Duration.between(a.getHoraEntrada(), h.getHoraInicio()).toHours();
-                    if (diffHoras <= 4) { // Si entró hasta 4 horas antes (o después)
+                    if (diffHoras <= 4) { 
                         asistenciaEncontrada = a;
                         asistenciasAsignadas.add(a.getId());
                         break;
@@ -153,46 +106,57 @@ public class AsistenciaService {
 
             String estado = "PENDIENTE";
             String mensaje = "Pendiente";
-            String css = "status-pending"; // gris o amarillo claro
+            String css = "status-pending";
 
             if (asistenciaEncontrada != null) {
-                // Calcular puntualidad
-                long diffMinutos = Duration.between(h.getHoraInicio(), asistenciaEncontrada.getHoraEntrada())
-                        .toMinutes();
+                long diffMinutos = Duration.between(h.getHoraInicio(), asistenciaEncontrada.getHoraEntrada()).toMinutes();
 
                 if (diffMinutos < -2) {
-                    estado = "ASISTIDO";
-                    mensaje = "Ingreso Temprano";
-                    css = "status-early"; // azul o verde
+                    estado = "ASISTIDO"; mensaje = "Ingreso Temprano"; css = "status-early";
                 } else if (diffMinutos >= -2 && diffMinutos <= 2) {
-                    estado = "ASISTIDO";
-                    mensaje = "Puntual";
-                    css = "status-ontime"; // verde
+                    estado = "ASISTIDO"; mensaje = "Puntual"; css = "status-ontime";
                 } else {
-                    estado = "ASISTIDO";
-                    mensaje = "Tardanza";
-                    css = "status-late"; // naranja/rojo
+                    estado = "ASISTIDO"; mensaje = "Tardanza"; css = "status-late";
                 }
             } else {
-                // No hay asistencia. Verificar si ya pasó el turno.
                 if (LocalTime.now().isAfter(h.getHoraInicio().plusMinutes(2))) {
-                    // Si ya pasaron 2 minutos del inicio y no marcó, ya es "Tarde" o "Falta" si
-                    // acabó el turno
                     if (LocalTime.now().isAfter(h.getHoraFin())) {
-                        estado = "FALTA";
-                        mensaje = "No Marcado";
-                        css = "status-missed"; // rojo
+                        estado = "FALTA"; mensaje = "No Marcado"; css = "status-missed";
                     } else {
-                        estado = "PENDIENTE"; // Aún puede marcar pero será tarde
-                        mensaje = "Retrasado";
-                        css = "status-warning"; // naranja
+                        estado = "PENDIENTE"; mensaje = "Retrasado"; css = "status-warning";
                     }
                 }
             }
-
             reporte.add(new TurnoDTO(h, asistenciaEncontrada, estado, mensaje, css));
         }
-
         return reporte;
+    }
+
+    public String procesarQrDinamico(int idEmpleado, String tokenQrRecibido) {
+        
+        String fechaHoy = LocalDate.now().toString();
+        String tokenEsperado = "GRUPO_PERUANA_" + fechaHoy;
+    
+        if (!tokenEsperado.equals(tokenQrRecibido)) {
+            return "ERROR: El código QR ha caducado o no es válido.";
+        }
+       
+        if (asistenciaRepository.existsByEmpleadoIdAndFecha(idEmpleado, LocalDate.now())) {
+             return "ERROR: Ya registraste tu asistencia el día de hoy.";
+        }
+
+        Empleado empleado = empleadoRepository.findById(idEmpleado).orElse(null);
+        if (empleado == null) return "ERROR: Empleado no encontrado.";
+
+        Asistencia asistencia = new Asistencia();
+        asistencia.setEmpleado(empleado);
+        asistencia.setFecha(LocalDate.now());
+        asistencia.setHoraEntrada(LocalTime.now());
+        asistencia.setModo("QR_DINAMICO"); 
+        asistencia.setObservacion("Ingreso verificado por QR");
+        
+        asistenciaRepository.save(asistencia);
+
+        return "EXITO"; 
     }
 }

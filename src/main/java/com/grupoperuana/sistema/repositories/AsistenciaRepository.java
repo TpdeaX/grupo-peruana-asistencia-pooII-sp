@@ -19,4 +19,6 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Integer>
     Optional<Asistencia> findByEmpleadoIdAndFechaAndHoraSalidaIsNull(int empleadoId, LocalDate fecha);
 
     List<Asistencia> findByEmpleadoIdAndFecha(int empleadoId, LocalDate fecha);
+    
+    boolean existsByEmpleadoIdAndFecha(int empleadoId, LocalDate fecha);
 }

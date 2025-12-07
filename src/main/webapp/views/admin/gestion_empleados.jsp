@@ -89,5 +89,22 @@
             <p style="text-align:center; margin-top:30px; color:#777;">No hay empleados registrados.</p>
         </c:if>
     </div>
+    
+    <script>
+  
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+
+    if (status === 'success') {
+        alert("Operación realizada correctamente");
+  
+    } else if (status === 'deleted') {
+        alert("Empleado eliminado correctamente.");
+    }
+    
+    if (status) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+</script>
 </body>
 </html>

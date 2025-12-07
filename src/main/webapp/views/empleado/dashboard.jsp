@@ -20,14 +20,19 @@
     <style>
         body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #F4FBF9; padding-bottom: 80px;}
         .mobile-container { padding: 20px; text-align: center; }
+        
         .welcome-card { background: white; border-radius: 24px; padding: 30px 20px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .big-clock { font-size: 2.5rem; font-weight: bold; color: #006A6A; margin: 10px 0; }
+        
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
         .action-btn {
             background: white; border-radius: 16px; padding: 20px; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.2s;
+            height: 100%;
         }
         .action-btn:active { background-color: #E0F2F1; transform: scale(0.98); }
+        .action-btn label, .action-btn h3 { margin-top: 10px; color: #333; font-size: 1rem; font-weight: 500; margin-bottom: 0;}
         
         .toast {
             visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
@@ -41,13 +46,19 @@
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
-        /* Status Colors */
-        .status-pending { border-left-color: #ff9800 !important; } /* Orange */
-        .status-early { border-left-color: #2196f3 !important; } /* Blue */
-        .status-ontime { border-left-color: #4caf50 !important; } /* Green */
-        .status-late { border-left-color: #f44336 !important; } /* Red */
-        .status-missed { border-left-color: #b71c1c !important; } /* Dark Red */
-        .status-warning { border-left-color: #ff9800 !important; } /* Orange */
+        .turno-pendiente { border-left-color: #ff9800 !important; }
+        .status-early { border-left-color: #2196f3 !important; } 
+        .status-ontime { border-left-color: #4caf50 !important; } 
+        .status-late { border-left-color: #f44336 !important; }
+        
+       
+        .card-success {
+            background-color: #e8f5e9; 
+            border: 1px solid #c8e6c9; 
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -73,7 +84,6 @@
 
         <div id="lista-turnos">
             <c:forEach var="turno" items="${reporteDiario}">
-                <!-- Card de Turno -->
                 <div class="turno-card ${turno.estado == 'PENDIENTE' ? 'turno-pendiente' : ''} ${turno.claseCss}" 
                      data-inicio="${turno.horario.horaInicio}" 
                      data-fin="${turno.horario.horaFin}"
@@ -100,18 +110,32 @@
         </div>
 
         <h3 style="text-align: left;">Marcar Asistencia</h3>
-        <div class="action-grid">
-            <div class="action-btn" onclick="iniciarProcesoMarca('UBICACION')">
-                <span class="material-symbols-outlined" style="font-size: 32px; color: #006A6A;">location_on</span>
-                <label style="margin-top:10px;">Marcar GPS</label>
-            </div>
-            
-            <div class="action-btn" onclick="alert('Función QR pendiente de cámara')">
-                <span class="material-symbols-outlined" style="font-size: 32px; color: #333;">qr_code_scanner</span>
-                <label style="margin-top:10px;">Escanear QR</label>
-            </div>
-        </div>
 
+        <c:choose>
+        
+            <c:when test="${yaMarcoHoy == true}">
+                <div class="card-success">
+                    <span class="material-symbols-outlined" style="font-size: 48px; color: #1b5e20; display:block; margin-bottom:10px;">check_circle</span>
+                    <h2 style="color: #1b5e20; margin: 0; font-size: 1.2rem;">¡Asistencia Registrada!</h2>
+                    <p style="color: #2e7d32; margin-top: 5px;">Ya has marcado tu entrada el día de hoy.</p>
+                </div>
+            </c:when>
+
+          
+            <c:otherwise>
+                <div class="action-grid">
+                    <div class="action-btn" onclick="iniciarProcesoMarca('UBICACION')">
+                        <span class="material-symbols-outlined" style="font-size: 32px; color: #006A6A;">location_on</span>
+                        <label>Marcar GPS</label>
+                    </div>
+                    
+                    <div class="action-btn" onclick="window.location.href='${pageContext.request.contextPath}/empleado/escanear'">
+                        <span class="material-symbols-outlined" style="font-size: 32px; color: #006A6A;">qr_code_scanner</span>
+                        <label>Escanear QR</label>
+                    </div>
+                </div>
+            </c:otherwise>
+        </c:choose>
         <br>
         <md-list style="background: white; border-radius: 16px; overflow: hidden; margin-top:20px;">
             <md-list-item type="button" onclick="window.location.href='${pageContext.request.contextPath}/asistencias?rol=empleado'">
@@ -136,76 +160,50 @@
     </div>
 
     <script>
-        // --- 1. Reloj en tiempo real ---
+        // --- 1. Reloj ---
         function actualizarReloj() {
             const ahora = new Date();
             document.getElementById('reloj').innerText = ahora.toLocaleTimeString();
             document.getElementById('fecha').innerText = ahora.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
         }
         setInterval(actualizarReloj, 1000);
-        const agora = new Date(); 
-        document.getElementById('reloj').innerText = agora.toLocaleTimeString();
-        document.getElementById('fecha').innerText = agora.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
-
+        actualizarReloj(); // Ejecutar al inicio
 
         // --- 2. Lógica Inteligente de Asistencia ---
         function iniciarProcesoMarca(modo) {
             
-            // Buscar el turno pendiente más cercano
-            // Seleccionamos todos los turnos pendientes
             const turnosPendientes = document.querySelectorAll('.turno-pendiente');
             let turnoObjetivo = null;
             
-            // Si hay pendientes, tomamos el primero (asumiendo orden cronológico del backend)
-            // O podríamos buscar el que esté más cerca de la hora actual
             if (turnosPendientes.length > 0) {
-                // Lógica simple: el primero pendiente es el que toca
                 turnoObjetivo = turnosPendientes[0]; 
             }
 
             let observacionCalculada = "Entrada Regular";
             
             if (turnoObjetivo) {
-                const horaInicioStr = turnoObjetivo.getAttribute('data-inicio'); // HH:mm:ss
-                const ahora = new Date();
-                
-                // Crear objeto fecha para el inicio del turno HOY
+                const horaInicioStr = turnoObjetivo.getAttribute('data-inicio'); 
                 const [horas, minutos, segundos] = horaInicioStr.split(':');
                 const fechaTurno = new Date();
                 fechaTurno.setHours(horas, minutos, segundos || 0);
                 
-                // Diferencia en minutos
-                const diferenciaMinutos = (ahora - fechaTurno) / 1000 / 60;
+                const diferenciaMinutos = (new Date() - fechaTurno) / 1000 / 60;
                 
-                // REGLAS DE NEGOCIO (2 minutos de tolerancia)
-                
-                // A. ESCENARIO: MUY TEMPRANO (Más de 30 min antes) - Opcional warning
                 if (diferenciaMinutos < -30) {
-                    const confirmar = confirm("¡Es muy temprano! Faltan más de 30 minutos para tu turno. ¿Deseas marcar de todas formas?");
-                    if (!confirmar) return;
+                    if (!confirm("¡Es muy temprano! Faltan más de 30 minutos. ¿Marcar igual?")) return;
                     observacionCalculada = "Ingreso Temprano";
-                }
-                // B. ESCENARIO: TEMPRANO (Entre -30 y -2)
-                else if (diferenciaMinutos < -2) {
+                } else if (diferenciaMinutos < -2) {
                     observacionCalculada = "Ingreso Temprano";
-                }
-                // C. ESCENARIO: PUNTUAL (+/- 2 minutos)
-                else if (diferenciaMinutos >= -2 && diferenciaMinutos <= 2) {
+                } else if (diferenciaMinutos >= -2 && diferenciaMinutos <= 2) {
                     observacionCalculada = "Puntual";
-                }
-                // D. ESCENARIO: TARDE (> 2 minutos)
-                else {
-                    // alert("Estás marcando fuera del tiempo de tolerancia (2 min). Se registrará como TARDANZA.");
+                } else {
                     observacionCalculada = "Llegada Tardía";
                 }
                 
             } else {
-                // Si no hay turno pendiente, podría ser salida o día libre
-                // Por ahora lo marcamos como sin turno
                 observacionCalculada = "Sin turno asignado / Extra";
             }
 
-            // Procedemos a geolocalizar
             document.getElementById('input-obs').value = observacionCalculada;
             obtenerUbicacionYEnviar(modo);
         }
@@ -233,7 +231,6 @@
             }
         }
 
-        // --- 3. Toast Mensajes ---
         window.onload = function() {
             var msg = "${sessionScope.mensaje}";
             if (msg && msg.trim() !== "") {

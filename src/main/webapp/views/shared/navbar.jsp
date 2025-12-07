@@ -7,40 +7,73 @@
         align-items: center;
         justify-content: space-between;
         padding: 12px 24px;
-        background-color: var(--md-sys-color-surface);
-        color: var(--md-sys-color-on-surface);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        background-color: white; 
+        color: #1f1f1f;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
     }
-    .app-title {
+    
+    .app-logo-link {
+        text-decoration: none;
+        color: #006A6A; 
         font-size: 1.375rem;
         font-weight: 500;
         display: flex;
         align-items: center;
         gap: 12px;
+        transition: opacity 0.2s;
     }
+    .app-logo-link:hover {
+        opacity: 0.8;
+    }
+
     .user-info {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 20px;
+    }
+    
+    .nav-link {
+        text-decoration: none;
+        color: #444746;
+        font-weight: 500;
+        font-size: 0.95rem;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+    .nav-link:hover {
+        background-color: #f0f2f5;
+        color: #1f1f1f;
     }
 </style>
 
+<c:set var="homeLink" value="${pageContext.request.contextPath}/" />
+<c:if test="${sessionScope.usuario.rol == 'ADMIN'}">
+    <c:set var="homeLink" value="${pageContext.request.contextPath}/admin" />
+</c:if>
+<c:if test="${sessionScope.usuario.rol == 'EMPLEADO'}">
+    <c:set var="homeLink" value="${pageContext.request.contextPath}/empleado" />
+</c:if>
+
 <nav class="top-app-bar">
-    <div class="app-title">
-        <span class="material-symbols-outlined">encrypted</span>
+    <a href="${homeLink}" class="app-logo-link">
+        <span class="material-symbols-outlined" style="font-size: 28px;">encrypted</span>
         Grupo Peruana
-    </div>
+    </a>
     
     <div class="user-info">
-        <span>Hola, <b>${sessionScope.usuario.nombres}</b></span>
-        <li class="nav-item" style="list-style: none;">
+        <span style="font-size: 0.9rem; color: #555;">Hola, <b>${sessionScope.usuario.nombres}</b></span>
+        
+        <c:if test="${sessionScope.usuario.rol == 'ADMIN'}">
             <a class="nav-link" href="${pageContext.request.contextPath}/empleados">Empleados</a>
-        </li>
-        <li class="nav-item" style="list-style: none;">
-            <a class="nav-link" href="${pageContext.request.contextPath}/horarios">Horarios</a>
-        </li>
-        <md-text-button onclick="window.location.href='${pageContext.request.contextPath}/auth?accion=logout'">
-            Cerrar Sesión
+            <a class="nav-link" href="${pageContext.request.contextPath}/horarios">	Horarios</a>
+        </c:if>
+
+        <md-text-button href="${pageContext.request.contextPath}/auth/logout" style="color: #b71c1c;">
+            Salir
             <span slot="icon" class="material-symbols-outlined">logout</span>
         </md-text-button>
     </div>

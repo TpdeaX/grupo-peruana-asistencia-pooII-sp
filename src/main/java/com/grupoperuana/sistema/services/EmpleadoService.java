@@ -1,9 +1,7 @@
 package com.grupoperuana.sistema.services;
 
 import java.util.List;
-
 import org.springframework.stereotype.Service;
-
 import com.grupoperuana.sistema.beans.Empleado;
 import com.grupoperuana.sistema.repositories.EmpleadoRepository;
 
@@ -21,14 +19,27 @@ public class EmpleadoService {
     }
 
     public List<Empleado> listarEmpleados() {
+     
         return empleadoRepository.findByEstadoOrderByApellidosAsc(1);
     }
 
     public int registrarEmpleado(Empleado e) {
         try {
+            
+            e.setEstado(1); 
+            
+           
+            if (e.getPassword() == null || e.getPassword().trim().isEmpty()) {
+                e.setPassword(e.getDni()); 
+            }
+     
+            System.out.println("Guardando empleado: " + e.getNombres() + " con pass: " + e.getPassword());
+
             empleadoRepository.save(e);
             return 1;
+            
         } catch (Exception ex) {
+            ex.printStackTrace(); 
             return 0;
         }
     }
@@ -43,6 +54,7 @@ public class EmpleadoService {
             existing.setApellidos(e.getApellidos());
             existing.setDni(e.getDni());
             existing.setRol(e.getRol());
+          
             empleadoRepository.save(existing);
             return 1;
         }).orElse(0);
@@ -50,7 +62,7 @@ public class EmpleadoService {
 
     public int eliminarEmpleado(int id) {
         return empleadoRepository.findById(id).map(existing -> {
-            existing.setEstado(0);
+            existing.setEstado(0); 
             empleadoRepository.save(existing);
             return 1;
         }).orElse(0);

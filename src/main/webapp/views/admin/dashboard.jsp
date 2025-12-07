@@ -95,7 +95,7 @@ body {
 				<p class="card-desc">Genera el código QR dinámico para que los
 					empleados marquen su entrada en la pantalla de recepción.</p>
 				<md-filled-button
-					onclick="alert('Aquí iremos a la pantalla de QR Dinámico')">
+					onclick="window.location.href='${pageContext.request.contextPath}/ver-qr'">
 				Abrir Pantalla QR </md-filled-button>
 			</div>
 

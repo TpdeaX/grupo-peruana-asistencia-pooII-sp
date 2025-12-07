@@ -55,7 +55,6 @@ public class HorarioController {
         model.addAttribute("empleados", empleados);
         model.addAttribute("fechaSeleccionada", fecha);
 
-        // Pass admin status to view to conditionally show buttons
         model.addAttribute("isAdmin", isAdmin(session));
 
         return "views/admin/gestion_horarios";

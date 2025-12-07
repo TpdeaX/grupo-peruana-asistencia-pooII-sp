@@ -23,8 +23,7 @@ public class AuthController {
 
     @GetMapping
     public String auth(HttpSession session) {
-        // If logout action is passed via query param, handled here or separate method
-        // For simplicity, redirect to index
+      
         return "redirect:/index.jsp";
     }
 
@@ -40,16 +39,16 @@ public class AuthController {
             @RequestParam(value = "g-recaptcha-response", required = false) String recaptchaResponse,
             HttpSession session) {
 
-        // Captcha validation logic can be added here if needed
+
 
         Empleado emp = empleadoService.validarLogin(dni, password);
 
         if (emp != null) {
             session.setAttribute("usuario", emp);
             if ("ADMIN".equals(emp.getRol())) {
-                return "redirect:/admin"; // Assuming admin is mapped
+                return "redirect:/admin"; 
             } else {
-                return "redirect:/empleado"; // Assuming empleado is mapped
+                return "redirect:/empleado"; 
             }
         } else {
             session.setAttribute("error", "Credenciales incorrectas");

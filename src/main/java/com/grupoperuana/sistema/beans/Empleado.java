@@ -6,8 +6,6 @@ import java.sql.Timestamp;
 @Entity
 @Table(name = "empleados")
 public class Empleado {
-    // private static final long serialVersionUID = 1L; // Not strictly needed for
-    // JPA unless Serializable
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,8 +27,8 @@ public class Empleado {
     private String rol;
 
     @Column(columnDefinition = "tinyint(1) default 1")
-    private int estado;
-
+    private int estado = 1; 
+    
     @Column(name = "created_at", insertable = false, updatable = false)
     private Timestamp createdAt;
 

@@ -69,7 +69,8 @@
         
         <c:if test="${sessionScope.usuario.rol == 'ADMIN'}">
             <a class="nav-link" href="${pageContext.request.contextPath}/empleados">Empleados</a>
-            <a class="nav-link" href="${pageContext.request.contextPath}/horarios">	Horarios</a>
+            <a class="nav-link" href="${pageContext.request.contextPath}/horarios">Horarios</a>
+            <a class="nav-link" href="${pageContext.request.contextPath}/tipoturno">Tipos de Turno</a>
         </c:if>
 
         <md-text-button href="${pageContext.request.contextPath}/auth/logout" style="color: #b71c1c;">

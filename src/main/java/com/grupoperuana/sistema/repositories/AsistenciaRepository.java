@@ -18,7 +18,11 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Integer>
 
     Optional<Asistencia> findByEmpleadoIdAndFechaAndHoraSalidaIsNull(int empleadoId, LocalDate fecha);
 
+    // Encuentra el ultimo turno abierto (sin salida) sin importar la fecha (para
+    // cerrar turnos de dias previos)
+    Optional<Asistencia> findTopByEmpleadoIdAndHoraSalidaIsNullOrderByFechaDesc(int empleadoId);
+
     List<Asistencia> findByEmpleadoIdAndFecha(int empleadoId, LocalDate fecha);
-    
+
     boolean existsByEmpleadoIdAndFecha(int empleadoId, LocalDate fecha);
 }

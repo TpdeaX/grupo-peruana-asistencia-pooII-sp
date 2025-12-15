@@ -3,6 +3,8 @@ package com.grupoperuana.sistema.controllers;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import com.grupoperuana.sistema.beans.Empleado;
 import com.grupoperuana.sistema.beans.Horario;
+import com.grupoperuana.sistema.beans.TipoTurno;
 import com.grupoperuana.sistema.services.EmpleadoService;
 import com.grupoperuana.sistema.services.HorarioService;
+import com.grupoperuana.sistema.services.TipoTurnoService;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -24,10 +28,13 @@ public class HorarioController {
 
     private final HorarioService horarioService;
     private final EmpleadoService empleadoService;
+    private final TipoTurnoService tipoTurnoService;
 
-    public HorarioController(HorarioService horarioService, EmpleadoService empleadoService) {
+    public HorarioController(HorarioService horarioService, EmpleadoService empleadoService,
+            TipoTurnoService tipoTurnoService) {
         this.horarioService = horarioService;
         this.empleadoService = empleadoService;
+        this.tipoTurnoService = tipoTurnoService;
     }
 
     private boolean checkSession(HttpSession session) {
@@ -50,10 +57,15 @@ public class HorarioController {
 
         List<Horario> horarios = horarioService.listarPorFecha(fecha);
         List<Empleado> empleados = empleadoService.listarEmpleados();
+        List<TipoTurno> tiposTurno = tipoTurnoService.listarTipos();
+
+        Map<String, String> turnoColors = tiposTurno.stream()
+                .collect(Collectors.toMap(TipoTurno::getNombre, TipoTurno::getColor));
 
         model.addAttribute("horarios", horarios);
         model.addAttribute("empleados", empleados);
         model.addAttribute("fechaSeleccionada", fecha);
+        model.addAttribute("turnoColors", turnoColors); // Pass colors to view
 
         model.addAttribute("isAdmin", isAdmin(session));
 
@@ -66,6 +78,7 @@ public class HorarioController {
             return "redirect:/horarios";
 
         model.addAttribute("empleados", empleadoService.listarEmpleados());
+        model.addAttribute("tiposTurno", tipoTurnoService.listarTipos()); // From DB
         return "views/admin/formulario_horario";
     }
 
@@ -78,6 +91,7 @@ public class HorarioController {
         if (horario != null) {
             model.addAttribute("horario", horario);
             model.addAttribute("empleados", empleadoService.listarEmpleados());
+            model.addAttribute("tiposTurno", tipoTurnoService.listarTipos()); // From DB
             return "views/admin/formulario_horario";
         }
         return "redirect:/horarios";
@@ -112,6 +126,7 @@ public class HorarioController {
         } catch (Exception e) {
             model.addAttribute("error", "Error al guardar: " + e.getMessage());
             model.addAttribute("empleados", empleadoService.listarEmpleados());
+            model.addAttribute("tiposTurno", tipoTurnoService.listarTipos()); // Also here on error
             return "views/admin/formulario_horario";
         }
     }

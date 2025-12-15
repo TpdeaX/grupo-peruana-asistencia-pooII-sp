@@ -81,9 +81,9 @@
 <body>
 
     <span class="material-symbols-outlined" style="font-size: 40px; color: #006C4C; margin-top: 20px;">qr_code_scanner</span>
-    <h2>Registrar Asistencia</h2>
+    <h2 id="page-title">Registrar Asistencia</h2>
+    <p id="page-desc">Escanea el código QR de la entrada/salida.</p>
    
-
     <% if (request.getAttribute("error") != null) { %>
         <div class="alert-error">
             <span class="material-symbols-outlined">error</span>
@@ -91,7 +91,26 @@
         </div>
     <% } %>
 
+    <%-- SECCION 1: LECTOR QR --%>
     <div id="reader"></div>
+
+    <%-- SECCION 2: EVIDENCIA (CAMARA) --%>
+    <div id="evidence-section" style="display:none; width: 100%; max-width: 400px; text-align: center;">
+        <h3 style="color:#006A6A;">Evidencia Requerida</h3>
+        <p>Validación exitosa. Ahora toma una foto.</p>
+        
+        <div style="background:black; width:100%; height:300px; border-radius:24px; overflow:hidden; position:relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <video id="camera-stream" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+            <canvas id="camera-canvas" style="display:none;"></canvas>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button onclick="tomarFotoYEnviar()" style="padding:15px 30px; border-radius:24px; border:none; background:#006A6A; color:white; font-size:16px; width:100%; cursor:pointer; font-weight:bold;">
+                <span class="material-symbols-outlined" style="vertical-align:middle; margin-right:5px;">camera</span>
+                Tomar Foto y Finalizar
+            </button>
+        </div>
+    </div>
 
     <div class="actions">
         <md-outlined-button href="${pageContext.request.contextPath}/empleado" style="width: 100%;">
@@ -99,24 +118,69 @@
         </md-outlined-button>
     </div>
 
-    <form id="formScan" action="${pageContext.request.contextPath}/qr" method="post">
+    <form id="formScan" action="${pageContext.request.contextPath}/qr" method="post" enctype="multipart/form-data">
         <input type="hidden" name="qrToken" id="inputToken">
+        <input type="file" name="foto" id="inputFoto" style="display:none;">
     </form>
 
     <script>
+        var html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        let videoStream = null;
+
         function onScanSuccess(decodedText, decodedResult) {
+            // 1. Detener Escaner y ocultarlo
             html5QrcodeScanner.clear();
+            document.getElementById('reader').style.display = 'none';
+            document.querySelector('.actions').style.display = 'none'; // ocultar boton cancelar temporalmente
+
+            // 2. Guardar Token
             document.getElementById('inputToken').value = decodedText;
-            
-            // Simular un "loading" visual antes de enviar
-            document.querySelector('h2').innerText = "Procesando...";
-            document.querySelector('p').innerText = "Validando código, espere...";
-            
-            document.getElementById('formScan').submit();
+
+            // 3. Mostrar Sección Camara
+            document.getElementById('evidence-section').style.display = 'block';
+            document.getElementById('page-title').innerText = "Verificar Identidad";
+            document.getElementById('page-desc').innerText = "Código detectado. Paso final: Foto.";
+
+            // 4. Iniciar Camara
+            iniciarCamara();
         }
 
-        var html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
         html5QrcodeScanner.render(onScanSuccess);
+
+        async function iniciarCamara() {
+            const video = document.getElementById('camera-stream');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }); // Selfie mode preferible? O environment? User para evidencia de empleado.
+                video.srcObject = videoStream;
+            } catch (err) {
+                alert("Error al acceder a la cámara: " + err);
+            }
+        }
+
+        function tomarFotoYEnviar() {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('camera-canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob(blob => {
+                // Adjuntar al form
+                const fileInput = document.getElementById('inputFoto');
+                const dataTransfer = new DataTransfer();
+                const file = new File([blob], "evidencia_qr_" + Date.now() + ".jpg", { type: "image/jpeg" });
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+
+                // Enviar
+                document.querySelector('button').innerText = "Enviando...";
+                document.querySelector('button').disabled = true;
+                document.getElementById('formScan').submit();
+
+            }, 'image/jpeg', 0.8);
+        }
     </script>
 </body>
 </html>

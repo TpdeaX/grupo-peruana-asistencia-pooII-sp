@@ -101,14 +101,7 @@
                                     <c:choose>
                                         <c:when test="${isAdmin}">
                                             <a href="${pageContext.request.contextPath}/horarios/editar?id=${h.id}" class="shift-block" 
-                                               style="background-color: ${h.tipoTurno == 'Caja' ? '#ffb6c1' : 
-                                                                         (h.tipoTurno == 'Stock' ? '#ffc107' : 
-                                                                         (h.tipoTurno == 'Atencion' ? '#90ee90' : 
-                                                                         (h.tipoTurno == 'Pesado' ? '#dda0dd' : 
-                                                                         (h.tipoTurno == 'Despacho' ? '#87ceeb' : 
-                                                                         (h.tipoTurno == 'Refrigerio' ? '#f5f5dc; color: black;' : 
-                                                                         (h.tipoTurno == 'Caja 2do Nivel' ? '#ff69b4' : 
-                                                                         (h.tipoTurno == 'Despacho PreVenta' ? '#4682b4' : '#17a2b8')))))))}">
+                                               style="background-color: ${turnoColors[h.tipoTurno] != null ? turnoColors[h.tipoTurno] : '#17a2b8'}; ${h.tipoTurno == 'Refrigerio' ? 'color: black;' : ''}">
                                                 ${h.tipoTurno}
                                                 <c:if test="${hour == hStart}">
                                                     <br><small>${h.horaInicio} - ${h.horaFin}</small>
@@ -117,14 +110,7 @@
                                         </c:when>
                                         <c:otherwise>
                                             <div class="shift-block" 
-                                               style="background-color: ${h.tipoTurno == 'Caja' ? '#ffb6c1' : 
-                                                                         (h.tipoTurno == 'Stock' ? '#ffc107' : 
-                                                                         (h.tipoTurno == 'Atencion' ? '#90ee90' : 
-                                                                         (h.tipoTurno == 'Pesado' ? '#dda0dd' : 
-                                                                         (h.tipoTurno == 'Despacho' ? '#87ceeb' : 
-                                                                         (h.tipoTurno == 'Refrigerio' ? '#f5f5dc; color: black;' : 
-                                                                         (h.tipoTurno == 'Caja 2do Nivel' ? '#ff69b4' : 
-                                                                         (h.tipoTurno == 'Despacho PreVenta' ? '#4682b4' : '#17a2b8')))))))}; cursor: default;">
+                                               style="background-color: ${turnoColors[h.tipoTurno] != null ? turnoColors[h.tipoTurno] : '#17a2b8'}; ${h.tipoTurno == 'Refrigerio' ? 'color: black;' : ''} cursor: default;">
                                                 ${h.tipoTurno}
                                                 <c:if test="${hour == hStart}">
                                                     <br><small>${h.horaInicio} - ${h.horaFin}</small>

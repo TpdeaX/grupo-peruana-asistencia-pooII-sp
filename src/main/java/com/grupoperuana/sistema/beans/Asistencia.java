@@ -32,6 +32,12 @@ public class Asistencia {
     private Double longitud;
     private String observacion;
 
+    @Column(name = "foto_url")
+    private String fotoUrl;
+
+    @Column(name = "foto_url_salida")
+    private String fotoUrlSalida;
+
     public Asistencia() {
     }
 
@@ -105,5 +111,21 @@ public class Asistencia {
 
     public void setObservacion(String observacion) {
         this.observacion = observacion;
+    }
+
+    public String getFotoUrl() {
+        return fotoUrl;
+    }
+
+    public void setFotoUrl(String fotoUrl) {
+        this.fotoUrl = fotoUrl;
+    }
+
+    public String getFotoUrlSalida() {
+        return fotoUrlSalida;
+    }
+
+    public void setFotoUrlSalida(String fotoUrlSalida) {
+        this.fotoUrlSalida = fotoUrlSalida;
     }
 }

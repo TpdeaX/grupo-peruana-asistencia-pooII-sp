@@ -58,17 +58,10 @@
                             <div class="mb-3">
                                 <label for="tipoTurno" class="form-label">Tipo de Turno</label>
                                 <select class="form-select" id="tipoTurno" name="tipoTurno" required>
-                                    <option value="Caja" ${horario.tipoTurno == 'Caja' ? 'selected' : ''}>Caja</option>
-                                    <option value="Caja 2do Nivel" ${horario.tipoTurno == 'Caja 2do Nivel' ? 'selected' : ''}>Caja 2do Nivel</option>
-                                    <option value="Stock" ${horario.tipoTurno == 'Stock' ? 'selected' : ''}>Stock</option>
-                                    <option value="Atencion" ${horario.tipoTurno == 'Atencion' ? 'selected' : ''}>Atención</option>
-                                    <option value="Pesado" ${horario.tipoTurno == 'Pesado' ? 'selected' : ''}>Pesado</option>
-                                    <option value="Despacho" ${horario.tipoTurno == 'Despacho' ? 'selected' : ''}>Despacho</option>
-                                    <option value="Despacho PreVenta" ${horario.tipoTurno == 'Despacho PreVenta' ? 'selected' : ''}>Despacho PreVenta</option>
-                                    <option value="Refrigerio" ${horario.tipoTurno == 'Refrigerio' ? 'selected' : ''}>Refrigerio</option>
-                                    <option value="Almacen" ${horario.tipoTurno == 'Almacen' ? 'selected' : ''}>Almacén</option>
-                                    <option value="Limpieza" ${horario.tipoTurno == 'Limpieza' ? 'selected' : ''}>Limpieza</option>
-                                    <option value="Seguridad" ${horario.tipoTurno == 'Seguridad' ? 'selected' : ''}>Seguridad</option>
+                                    <option value="">Seleccione un turno</option>
+                                    <c:forEach items="${tiposTurno}" var="t">
+                                        <option value="${t.nombre}" ${horario.tipoTurno == t.nombre ? 'selected' : ''}>${t.nombre}</option>
+                                    </c:forEach>
                                 </select>
                             </div>
 

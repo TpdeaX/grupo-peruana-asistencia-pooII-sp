@@ -393,6 +393,149 @@ md-filled-button {
         max-width: 100%;
     }
 }
+
+/* Saved Accounts & Remember Me */
+.saved-accounts-container {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeIn 0.5s ease;
+    margin-bottom: 20px;
+}
+
+.account-card {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 310px;
+    /* Match Header User Profile Button */
+    background-color: #E8DEF8; /* Lavender / Surface Container High */
+    padding: 8px 16px 8px 8px; /* Slightly tighter padding like header btn */
+    border-radius: 12px; /* Rounded corners as per card style */
+    margin-bottom: 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    position: relative;
+    user-select: none;
+    min-height: 52px;
+}
+
+.account-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+    background-color: #E2D3F5; /* Slightly darker lavender on hover */
+}
+
+/* Header Avatar Style */
+.account-avatar {
+    width: 36px;
+    height: 36px;
+    background-color: #E91E63; /* Pink matching header */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-right: 12px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.account-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+}
+.account-name {
+    font-weight: 700;
+    color: #1C1B1F; /* var(--text-primary) */
+    font-size: 1rem;
+    line-height: 1.2;
+}
+.account-role {
+    display: none; /* User didn't request role, closer match to header */
+}
+
+.remove-account {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #625B71; /* Secondary */
+    transition: all 0.2s;
+    margin-left: 8px;
+}
+.remove-account:hover {
+    background: #FFD8E4; /* Error Container */
+    color: #B3261E; /* Error */
+}
+
+.add-account-btn {
+    margin-top: 10px;
+    color: var(--brand-purple);
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+}
+.add-account-btn:hover {
+    background: #f3e8ff;
+}
+
+.remember-me {
+    width: 100%;
+    max-width: 310px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 25px;
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.back-btn-container {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    padding-bottom: 10px;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--brand-dark);
+    font-size: 1.2rem;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-btn:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 </style>
 </head>
 <body>
@@ -439,12 +582,22 @@ md-filled-button {
 
 		<div class="form-side">
 			<div class="form-header">
+                <div id="back-btn-wrapper" class="back-btn-container" style="display: none;">
+                    <button type="button" class="back-btn" onclick="goBack()" title="Regresar">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                </div>
+
 				<img src="assets/logo-peruana-icon.png" class="mobile-logo"
 					alt="Logo Peruana"> <span class="wave-emoji">👋</span>
 
 				<h2 class="welcome-title">¡Hola de nuevo!</h2>
 				<p class="welcome-desc">Ingresa tus credenciales para acceder al
 					sistema.</p>
+			</div>
+
+			<div id="saved-sessions-view" class="saved-accounts-container">
+				<!-- JS populate -->
 			</div>
 
 			<c:if test="${not empty sessionScope.error}">
@@ -470,12 +623,11 @@ md-filled-button {
 						slot="leading-icon" class="material-symbols-rounded">lock</md-icon>
 					</md-outlined-text-field>
 				</div>
-				<!--  
-				<div class="captcha-wrapper">
-					<div class="g-recaptcha"
-						data-sitekey="6Le0gBQsAAAAAApvrAjvZiuw6UyH9tWFmnp4kV94"></div>
+				<div class="remember-me">
+					<md-checkbox name="rememberMe" id="rememberMe" touch-target="wrapper"></md-checkbox>
+					<label for="rememberMe" style="cursor: pointer;">Recordarme</label>
 				</div>
--->
+
 				<div class="btn-wrapper">
 					<md-filled-button type="submit" id="loginBtn"> <span
 						id="btnText">Ingresar</span> <md-icon slot="trailing-icon"
@@ -502,10 +654,216 @@ md-filled-button {
 	
         // --- LÓGICA DEL LOGIN ---
         const loginForm = document.getElementById('loginForm');
+        
+        // Brand Colors for Random Avatars
+        const brandColors = [
+            '#7C3AED', // Brand Purple
+            '#FF2A5F', // Brand Magenta
+            '#FFB900', // Brand Yellow
+            '#FF9F1C', // Orange
+            '#2EC4B6', // Teal
+            '#3A86FF'  // Blue
+        ];
+        
+        const getRandomBrandColor = () => {
+             return brandColors[Math.floor(Math.random() * brandColors.length)];
+        };
+
+        // Saved Sessions Logic
+        const savedSessions = JSON.parse(localStorage.getItem('saved_sessions') || '[]');
+        const savedView = document.getElementById('saved-sessions-view');
+        // Welcome elements
+        const welcomeTitle = document.querySelector('.welcome-title');
+        const welcomeDesc = document.querySelector('.welcome-desc');
+        const backBtnWrapper = document.getElementById('back-btn-wrapper');
+
+        function renderSavedSessions() {
+            if (savedSessions.length > 0) {
+                // Hide Login Form
+                loginForm.style.display = 'none';
+                savedView.style.display = 'flex';
+                // Hide Back Button explicitly when in selection mode
+                backBtnWrapper.style.display = 'none';
+                
+                welcomeTitle.textContent = "Bienvenido de nuevo";
+                welcomeDesc.textContent = "Selecciona una cuenta para ingresar.";
+                
+                savedView.innerHTML = '';
+                
+                savedSessions.forEach((user, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'account-card';
+                    card.onclick = (e) => {
+                         // Ignore if clicked on remove button (handled by its own listener)
+                         if(e.target.closest('.remove-account')) return;
+                         selectAccount(user);
+                    };
+                    
+                    // Name Parsing
+                    let displayName = 'Usuario';
+                    if (user.nombres && user.nombres.trim().length > 0) {
+                        const n = user.nombres.trim().split(/\s+/)[0];
+                        const a = (user.apellidos && user.apellidos.trim()) ? user.apellidos.trim().split(/\s+/)[0] : '';
+                        displayName = n + (a ? ' ' + a : '');
+                    }
+                    
+                    const avatarText = user.avatar || displayName.charAt(0).toUpperCase();
+
+                    // DOM Creation (Safer and easier to debug)
+                    const elAvatar = document.createElement('div');
+                    elAvatar.className = 'account-avatar';
+                    elAvatar.style.backgroundColor = getRandomBrandColor(); // Random Color
+                    elAvatar.textContent = avatarText;
+                    
+                    const elInfo = document.createElement('div');
+                    elInfo.className = 'account-info';
+                    
+                    const elName = document.createElement('div');
+                    elName.className = 'account-name';
+                    elName.textContent = displayName;
+                    
+                    elInfo.appendChild(elName);
+                    
+                    const elRemove = document.createElement('div');
+                    elRemove.className = 'remove-account';
+                    elRemove.title = "Eliminar cuenta";
+                    elRemove.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                    elRemove.onclick = (e) => {
+                        e.stopPropagation();
+                        removeAccount(index);
+                    };
+
+                    card.appendChild(elAvatar);
+                    card.appendChild(elInfo);
+                    card.appendChild(elRemove);
+                    
+                    savedView.appendChild(card);
+                });
+                
+                // Add "Use another account" button
+                const addBtn = document.createElement('div');
+                addBtn.className = 'add-account-btn';
+                addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Usar otra cuenta';
+                addBtn.onclick = showLoginForm;
+                savedView.appendChild(addBtn);
+                
+            } else {
+                showLoginForm();
+            }
+        }
+
+        function selectAccount(user) {
+            // Check if we have a saved password for Instant Login
+            if (user.password && user.password.length > 0) {
+                // Show visuals - Maybe update the card itself or show a global loader overlay
+                // For now, let's keep the Saved Layout but show a "Logging in..." state
+                
+                // We can reuse the Welcome Title to show status
+                welcomeTitle.textContent = "Iniciando sesión...";
+                welcomeDesc.textContent = "Verificando credenciales...";
+                
+                // We still need to fill the form to submit it, but we can keep it hidden
+                const dniInput = document.querySelector('md-outlined-text-field[name="dni"]');
+                const passInput = document.querySelector('md-outlined-text-field[name="password"]');
+                
+                dniInput.value = user.dni;
+                passInput.value = user.password;
+                
+                // Auto submit
+                loginBtn.click(); 
+                return;
+            }
+
+            // Normal flow: Show form and ask for password
+            showLoginForm();
+            
+            const dniInput = document.querySelector('md-outlined-text-field[name="dni"]');
+            const passInput = document.querySelector('md-outlined-text-field[name="password"]');
+            
+            // Set value for MD component
+            dniInput.value = user.dni;
+            
+            // Highlight connection
+            welcomeTitle.textContent = "Hola, " + user.nombres.split(' ')[0];
+            welcomeDesc.textContent = "Por favor, confirma tu contraseña.";
+            
+            // Focus password
+            setTimeout(() => {
+                passInput.focus();
+            }, 300);
+        }
+
+        window.removeAccount = function(index) {
+            savedSessions.splice(index, 1);
+            localStorage.setItem('saved_sessions', JSON.stringify(savedSessions));
+            // Re-render
+            const savedView2 = document.getElementById('saved-sessions-view');
+            // If empty, force login form
+            if (savedSessions.length === 0) {
+                savedView2.style.display = 'none'; // hide immediately
+                showLoginForm();
+                return;
+            }
+            renderSavedSessions();
+        };
+
+        function showLoginForm() {
+            savedView.style.display = 'none';
+            loginForm.style.display = 'block';
+            
+            // Animate form appearance
+            loginForm.style.animation = 'fadeIn 0.4s ease';
+            
+            // Default texts if we are not selecting a specific user (checked by logic or simply reset everywhere)
+            // If we coming from "Usar otra cuenta", we want standard text.
+            // If coming from selectAccount, we override it there.
+            // But showLoginForm is called by "Usar otra cuenta" directly.
+            // Let's rely on selectAccount overriding it AFTER calling showLoginForm.
+             if (savedSessions.length === 0 || window.event?.currentTarget?.className === 'add-account-btn') {
+                 welcomeTitle.textContent = "¡Hola de nuevo!";
+                 welcomeDesc.textContent = "Ingresa tus credenciales para acceder al sistema.";
+                 // Clear inputs if "Use another"
+                 document.querySelector('md-outlined-text-field[name="dni"]').value = '';
+                 document.querySelector('md-outlined-text-field[name="password"]').value = '';
+            }
+             
+            // Show Back button if we have saved sessions
+            if (savedSessions.length > 0) {
+                backBtnWrapper.style.display = 'flex';
+            } else {
+                backBtnWrapper.style.display = 'none';
+            }
+        }
+        
+        function goBack() {
+             loginForm.style.display = 'none';
+             renderSavedSessions();
+             // Reset form fields
+             document.querySelector('md-outlined-text-field[name="dni"]').value = '';
+             document.querySelector('md-outlined-text-field[name="password"]').value = '';
+        }
+
+
+        // Init
+        window.addEventListener('load', renderSavedSessions);
+
+
         const loginBtn = document.getElementById('loginBtn');
         const btnText = document.getElementById('btnText');
 
         loginForm.addEventListener('submit', () => {
+            const rememberMe = document.getElementById('rememberMe').checked;
+            if (rememberMe) {
+                const dniVal = document.querySelector('md-outlined-text-field[name="dni"]').value;
+                const passVal = document.querySelector('md-outlined-text-field[name="password"]').value;
+                // Temporarily save to sessionStorage to pass to the next page (Sidebar)
+                // This is safer than URL params and only lives until the tab closes
+                sessionStorage.setItem('pending_auth', JSON.stringify({
+                    dni: dniVal,
+                    password: passVal
+                }));
+            }
+            
             loginBtn.disabled = true;
             // Usamos comillas simples para evitar conflicto con JSP
             btnText.innerHTML = '<md-circular-progress indeterminate density="-4" style="--md-circular-progress-size: 20px; --md-circular-progress-active-indicator-color: white; margin-right:8px;"></md-circular-progress> Verificando...';

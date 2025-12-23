@@ -38,6 +38,18 @@ public class Asistencia {
     @Column(name = "foto_url_salida")
     private String fotoUrlSalida;
 
+    @Column(name = "dinero_descuento")
+    private Double dineroDescuento;
+
+    @Column(name = "dinero_bonificacion")
+    private Double dineroBonificacion;
+
+    @Column(name = "minutos_tardanza")
+    private Long minutosTardanza;
+
+    @Column(name = "minutos_extras")
+    private Long minutosExtras;
+
     public Asistencia() {
     }
 
@@ -127,5 +139,37 @@ public class Asistencia {
 
     public void setFotoUrlSalida(String fotoUrlSalida) {
         this.fotoUrlSalida = fotoUrlSalida;
+    }
+
+    public Double getDineroDescuento() {
+        return dineroDescuento;
+    }
+
+    public void setDineroDescuento(Double dineroDescuento) {
+        this.dineroDescuento = dineroDescuento;
+    }
+
+    public Double getDineroBonificacion() {
+        return dineroBonificacion;
+    }
+
+    public void setDineroBonificacion(Double dineroBonificacion) {
+        this.dineroBonificacion = dineroBonificacion;
+    }
+
+    public Long getMinutosTardanza() {
+        return minutosTardanza;
+    }
+
+    public void setMinutosTardanza(Long minutosTardanza) {
+        this.minutosTardanza = minutosTardanza;
+    }
+
+    public Long getMinutosExtras() {
+        return minutosExtras;
+    }
+
+    public void setMinutosExtras(Long minutosExtras) {
+        this.minutosExtras = minutosExtras;
     }
 }

@@ -70,7 +70,17 @@
         <c:if test="${sessionScope.usuario.rol == 'ADMIN'}">
             <a class="nav-link" href="${pageContext.request.contextPath}/empleados">Empleados</a>
             <a class="nav-link" href="${pageContext.request.contextPath}/horarios">Horarios</a>
+            <a class="nav-link" href="${pageContext.request.contextPath}/plantillas">Plantillas</a>
             <a class="nav-link" href="${pageContext.request.contextPath}/tipoturno">Tipos de Turno</a>
+            <a class="nav-link" href="${pageContext.request.contextPath}/sucursales">Sucursales</a>
+            <a class="nav-link" href="${pageContext.request.contextPath}/feriados">Feriados</a>
+            <a class="nav-link" href="${pageContext.request.contextPath}/justificaciones">Justificaciones</a>
+            <a class="nav-link" href="${pageContext.request.contextPath}/reportes/calculo">Reportes</a>
+        </c:if>
+
+        <c:if test="${sessionScope.usuario.rol == 'EMPLEADO'}">
+            <a class="nav-link" href="${pageContext.request.contextPath}/empleado/mi_historial">Mi Historial</a>
+            <a class="nav-link" href="${pageContext.request.contextPath}/justificaciones">Justificaciones</a>
         </c:if>
 
         <md-text-button href="${pageContext.request.contextPath}/auth/logout" style="color: #b71c1c;">

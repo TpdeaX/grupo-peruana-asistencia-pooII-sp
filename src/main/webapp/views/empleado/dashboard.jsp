@@ -63,8 +63,9 @@
 </head>
 <body>
 
-    <jsp:include page="../shared/navbar.jsp" />
-
+    <jsp:include page="../shared/sidebar.jsp" />
+    <div class="main-content">
+        <jsp:include page="../shared/header.jsp" />
     <div class="mobile-container">
         
         <div class="welcome-card">
@@ -137,7 +138,16 @@
                 </div>
             </c:when>
 
-            <%-- Caso 2: Fin de Jornada --%>
+            <%-- Caso 2: Dia Justificado (PRIORIDAD ALTA) --%>
+            <c:when test="${esDiaJustificado == true}">
+                <div class="card-success" style="border-color: #81d4fa; background-color: #e1f5fe;">
+                    <span class="material-symbols-outlined" style="font-size: 48px; color: #0288d1; display:block; margin-bottom:10px;">verified</span>
+                    <h2 style="color: #0277bd; margin: 0; font-size: 1.2rem;">Día Justificado</h2>
+                    <p style="color: #01579b; margin-top: 5px;">Tu inasistencia ha sido justificada. No es necesario marcar hoy.</p>
+                </div>
+            </c:when>
+
+            <%-- Caso 3: Fin de Jornada --%>
             <c:when test="${finJornada == true}">
                 <div class="card-success" style="border-color: #a5d6a7; background-color: #e8f5e9;">
                     <span class="material-symbols-outlined" style="font-size: 48px; color: #2e7d32; display:block; margin-bottom:10px;">check_circle</span>
@@ -146,7 +156,7 @@
                 </div>
             </c:when>
 
-            <%-- Caso 3: Entrada (o Espera) --%>
+            <%-- Caso 4: Entrada (o Espera) --%>
             <c:otherwise>
                 <%-- Mensaje de éxito discreto si ya marcó alguna vez hoy --%>
                 <c:if test="${not empty listaAsistencia and listaAsistencia[0].fecha == java.time.LocalDate.now()}">
@@ -165,6 +175,11 @@
                         <span class="material-symbols-outlined" style="font-size: 32px; color: #006A6A;">qr_code_scanner</span>
                         <label>Escanear QR</label>
                     </div>
+
+                    <div class="action-btn" onclick="window.location.href='${pageContext.request.contextPath}/justificaciones'">
+                        <span class="material-symbols-outlined" style="font-size: 32px; color: #d32f2f;">assignment_late</span>
+                        <label>Justificar Falta</label>
+                    </div>
                 </div>
             </c:otherwise>
         </c:choose>
@@ -177,6 +192,7 @@
             </md-list-item>
         </md-list>
 
+    </div>
     </div>
 
     <%-- MODAL DE CAMARA --%>

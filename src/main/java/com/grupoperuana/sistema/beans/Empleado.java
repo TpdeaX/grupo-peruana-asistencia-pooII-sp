@@ -3,9 +3,13 @@ package com.grupoperuana.sistema.beans;
 import jakarta.persistence.*;
 import java.sql.Timestamp;
 
+import java.io.Serializable;
+
 @Entity
 @Table(name = "empleados")
-public class Empleado {
+public class Empleado implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,8 +31,18 @@ public class Empleado {
     private String rol;
 
     @Column(columnDefinition = "tinyint(1) default 1")
-    private int estado = 1; 
-    
+    private int estado = 1;
+
+    @Column(name = "sueldo_base", columnDefinition = "decimal(10,2) default 1025.00")
+    private Double sueldoBase;
+
+    @Column(name = "tipo_modalidad", length = 20, columnDefinition = "varchar(20) default 'OBLIGADO'")
+    private String tipoModalidad = "OBLIGADO";
+
+    @ManyToOne
+    @JoinColumn(name = "id_sucursal")
+    private Sucursal sucursal;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Timestamp createdAt;
 
@@ -97,6 +111,30 @@ public class Empleado {
 
     public void setEstado(int estado) {
         this.estado = estado;
+    }
+
+    public Double getSueldoBase() {
+        return sueldoBase;
+    }
+
+    public void setSueldoBase(Double sueldoBase) {
+        this.sueldoBase = sueldoBase;
+    }
+
+    public String getTipoModalidad() {
+        return tipoModalidad;
+    }
+
+    public void setTipoModalidad(String tipoModalidad) {
+        this.tipoModalidad = tipoModalidad;
+    }
+
+    public Sucursal getSucursal() {
+        return sucursal;
+    }
+
+    public void setSucursal(Sucursal sucursal) {
+        this.sucursal = sucursal;
     }
 
     public Timestamp getCreatedAt() {

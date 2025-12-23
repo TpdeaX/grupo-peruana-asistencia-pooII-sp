@@ -23,7 +23,7 @@ public class AuthController {
 
     @GetMapping
     public String auth(HttpSession session) {
-      
+
         return "redirect:/index.jsp";
     }
 
@@ -37,18 +37,41 @@ public class AuthController {
     public String login(@RequestParam("dni") String dni,
             @RequestParam("password") String password,
             @RequestParam(value = "g-recaptcha-response", required = false) String recaptchaResponse,
-            HttpSession session) {
-
-
+            @RequestParam(value = "rememberMe", required = false) boolean rememberMe,
+            HttpSession session,
+            jakarta.servlet.http.HttpServletResponse response) {
 
         Empleado emp = empleadoService.validarLogin(dni, password);
 
         if (emp != null) {
             session.setAttribute("usuario", emp);
+
+            if (rememberMe) {
+                // 30 dias en segundos
+                int timeout = 30 * 24 * 60 * 60;
+                session.setMaxInactiveInterval(timeout);
+
+                // Persistir cookie SESSION (Spring Session) o JSESSIONID
+                String encodedSessionId = java.util.Base64.getEncoder().encodeToString(session.getId().getBytes());
+
+                jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("JSESSIONID", session.getId());
+                cookie.setPath("/");
+                cookie.setMaxAge(timeout);
+                cookie.setHttpOnly(true);
+                response.addCookie(cookie);
+
+                // Por si acaso usan Spring Session con nombre SESSION
+                jakarta.servlet.http.Cookie springCookie = new jakarta.servlet.http.Cookie("SESSION", encodedSessionId);
+                springCookie.setPath("/");
+                springCookie.setMaxAge(timeout);
+                springCookie.setHttpOnly(true);
+                response.addCookie(springCookie);
+            }
+
             if ("ADMIN".equals(emp.getRol())) {
-                return "redirect:/admin"; 
+                return "redirect:/admin";
             } else {
-                return "redirect:/empleado"; 
+                return "redirect:/empleado";
             }
         } else {
             session.setAttribute("error", "Credenciales incorrectas");

@@ -8,7 +8,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <jsp:include page="/views/shared/navbar.jsp" />
+    <jsp:include page="/views/shared/sidebar.jsp" />
+    <div class="main-content">
+        <jsp:include page="/views/shared/header.jsp" />
     
     <div class="container mt-4">
         <div class="row justify-content-center">
@@ -29,7 +31,7 @@
                                 <label for="empleadoId" class="form-label">Empleado</label>
                                 <select class="form-select" id="empleadoId" name="empleadoId" required>
                                     <c:forEach items="${empleados}" var="emp">
-                                        <option value="${emp.id}" ${horario.empleado.id == emp.id ? 'selected' : ''}>
+                                        <option value="${emp.id}" ${horario.empleado != null && horario.empleado.id eq emp.id ? 'selected' : ''}>
                                             ${emp.nombres} ${emp.apellidos}
                                         </option>
                                     </c:forEach>
@@ -40,6 +42,17 @@
                                 <label for="fecha" class="form-label">Fecha</label>
                                 <input type="date" class="form-control" id="fecha" name="fecha" 
                                        value="${horario != null ? horario.fecha : param.fecha}" required>
+                            </div>
+
+                            <!-- Template Selector -->
+                            <div class="mb-3">
+                                <label for="plantillaSelect" class="form-label">Cargar desde Plantilla (Opcional)</label>
+                                <select class="form-select" id="plantillaSelect">
+                                    <option value="">Seleccione una plantilla...</option>
+                                    <c:forEach items="${plantillas}" var="p">
+                                        <option value="${p.id}">${p.nombre}</option>
+                                    </c:forEach>
+                                </select>
                             </div>
 
                             <div class="row">
@@ -80,9 +93,64 @@
                     </div>
                 </div>
             </div>
+    </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Build JSON object of templates
+        const plantillas = {
+            <c:forEach items="${plantillas}" var="p" varStatus="status">
+                "${p.id}": [
+                    <c:forEach items="${p.detalles}" var="d" varStatus="dStatus">
+                        {
+                            "dia": ${d.diaSemana},
+                            "inicio": "${d.horaInicio}",
+                            "fin": "${d.horaFin}",
+                            "tipo": "${d.tipoTurno}",
+                            "descanso": ${d.esDescanso}
+                        }${!dStatus.last ? ',' : ''}
+                    </c:forEach>
+                ]${!status.last ? ',' : ''}
+            </c:forEach>
+        };
+
+        const plantillaSelect = document.getElementById('plantillaSelect');
+        const fechaInput = document.getElementById('fecha');
+
+        function applyTemplate() {
+            const plantillaId = plantillaSelect.value;
+            const fechaVal = fechaInput.value;
+
+            if (plantillaId && fechaVal && plantillas[plantillaId]) {
+                const date = new Date(fechaVal);
+                // JS getDay(): 0=Sun, 1=Mon...6=Sat.
+                // Our DB: 1=Mon...7=Sun.
+                // Convert JS to ISO (1-7)
+                let dayOfWeek = date.getDay(); 
+                if (dayOfWeek === 0) dayOfWeek = 7; // Sunday
+
+                const detalles = plantillas[plantillaId];
+                const detalle = detalles.find(d => d.dia === dayOfWeek);
+
+                if (detalle) {
+                    if (detalle.descanso) {
+                        alert("El día seleccionado es día de descanso en esta plantilla.");
+                        document.getElementById('horaInicio').value = '';
+                        document.getElementById('horaFin').value = '';
+                        document.getElementById('tipoTurno').value = '';
+                    } else {
+                        document.getElementById('horaInicio').value = detalle.inicio;
+                        document.getElementById('horaFin').value = detalle.fin;
+                        document.getElementById('tipoTurno').value = detalle.tipo;
+                    }
+                }
+            }
+        }
+
+        plantillaSelect.addEventListener('change', applyTemplate);
+        fechaInput.addEventListener('change', applyTemplate);
+    </script>
 </body>
 </html>

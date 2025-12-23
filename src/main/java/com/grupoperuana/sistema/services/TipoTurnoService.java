@@ -1,6 +1,8 @@
 package com.grupoperuana.sistema.services;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import com.grupoperuana.sistema.beans.TipoTurno;
 import com.grupoperuana.sistema.repositories.TipoTurnoRepository;
@@ -16,6 +18,13 @@ public class TipoTurnoService {
 
     public List<TipoTurno> listarTipos() {
         return tipoTurnoRepository.findAll();
+    }
+
+    public Page<TipoTurno> listarTipos(Pageable pageable, String keyword) {
+        if (keyword != null && !keyword.isBlank()) {
+            return tipoTurnoRepository.findByNombreContainingIgnoreCase(keyword, pageable);
+        }
+        return tipoTurnoRepository.findAll(pageable);
     }
 
     public TipoTurno obtenerPorId(int id) {

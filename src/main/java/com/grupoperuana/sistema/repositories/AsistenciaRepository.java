@@ -10,7 +10,8 @@ import org.springframework.stereotype.Repository;
 import com.grupoperuana.sistema.beans.Asistencia;
 
 @Repository
-public interface AsistenciaRepository extends JpaRepository<Asistencia, Integer> {
+public interface AsistenciaRepository extends JpaRepository<Asistencia, Integer>,
+        org.springframework.data.jpa.repository.JpaSpecificationExecutor<Asistencia> {
 
     List<Asistencia> findByEmpleadoIdOrderByFechaDesc(int empleadoId);
 
@@ -25,4 +26,8 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Integer>
     List<Asistencia> findByEmpleadoIdAndFecha(int empleadoId, LocalDate fecha);
 
     boolean existsByEmpleadoIdAndFecha(int empleadoId, LocalDate fecha);
+
+    List<Asistencia> findByFechaBetweenOrderByFechaAsc(LocalDate start, LocalDate end);
+
+    List<Asistencia> findByEmpleadoIdAndFechaBetweenOrderByFechaAsc(int empleadoId, LocalDate start, LocalDate end);
 }

@@ -16,4 +16,8 @@ public interface HorarioRepository extends JpaRepository<Horario, Integer> {
     List<Horario> findByFechaOrderByHoraInicioAsc(LocalDate fecha);
 
     List<Horario> findByEmpleadoIdAndFecha(int empleadoId, LocalDate fecha);
+
+    List<Horario> findByFechaBetween(LocalDate start, LocalDate end);
+
+    List<Horario> findByEmpleadoIdAndFechaBetween(int empleadoId, LocalDate start, LocalDate end);
 }

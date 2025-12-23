@@ -21,6 +21,11 @@ import com.grupoperuana.sistema.beans.Empleado;
 import com.grupoperuana.sistema.dto.TurnoDTO;
 import com.grupoperuana.sistema.services.AsistenciaService;
 import com.grupoperuana.sistema.services.ReporteService;
+import com.grupoperuana.sistema.repositories.SucursalRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import java.time.LocalDate;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -30,18 +35,27 @@ public class AsistenciaController {
 
     private final AsistenciaService asistenciaService;
     private final ReporteService reporteService;
+    private final SucursalRepository sucursalRepository;
 
-    public AsistenciaController(AsistenciaService asistenciaService, ReporteService reporteService) {
+    public AsistenciaController(AsistenciaService asistenciaService, ReporteService reporteService,
+            SucursalRepository sucursalRepository) {
         this.asistenciaService = asistenciaService;
         this.reporteService = reporteService;
+        this.sucursalRepository = sucursalRepository;
     }
 
     private boolean checkSession(HttpSession session) {
         return session.getAttribute("usuario") != null;
     }
 
-    @GetMapping({ "/asistencias", "/admin", "/empleado", "/admin/asistencias" })
-    public String handleGet(HttpServletRequest request, HttpSession session, Model model) {
+    @GetMapping({ "/asistencias", "/admin/asistencias", "/empleado/mi_historial", "/admin", "/empleado" })
+    public String handleGet(HttpServletRequest request, HttpSession session, Model model,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer sucursalId,
+            @RequestParam(required = false) LocalDate fechaInicio,
+            @RequestParam(required = false) LocalDate fechaFin) {
         if (!checkSession(session)) {
             return "redirect:/index.jsp";
         }
@@ -50,16 +64,29 @@ public class AsistenciaController {
         String path = request.getServletPath();
 
         if ("ADMIN".equals(usuario.getRol())) {
-            if (path.contains("/admin/asistencias") || path.contains("/asistencias")) {
-                List<Asistencia> lista = asistenciaService.listarTodo();
-                model.addAttribute("listaAsistencia", lista);
-                return "views/admin/reporte_asistencia";
-            } else {
+            if (path.contains("/admin") && !path.contains("asistencias")) {
                 return "views/admin/dashboard";
             }
+
+            // Logic for /asistencias or /admin/asistencias
+            Page<Asistencia> pagina = asistenciaService.listarAsistenciasPaginado(
+                    PageRequest.of(page, size, Sort.by("fecha").descending().and(Sort.by("horaEntrada").descending())),
+                    keyword, sucursalId, fechaInicio, fechaFin);
+
+            model.addAttribute("listaAsistencia", pagina.getContent());
+            model.addAttribute("pagina", pagina);
+            model.addAttribute("listaSucursales", sucursalRepository.findAll());
+            // Preserve filters
+            model.addAttribute("keyword", keyword);
+            model.addAttribute("sucursalId", sucursalId);
+            model.addAttribute("fechaInicio", fechaInicio);
+            model.addAttribute("fechaFin", fechaFin);
+            model.addAttribute("size", size);
+
+            return "views/admin/asistencias";
         } else {
 
-            if (path.contains("/asistencias")) {
+            if (path.contains("/asistencias") || path.contains("mi_historial")) {
                 List<Asistencia> lista = asistenciaService.listarPorEmpleado(usuario.getId());
                 model.addAttribute("listaAsistencia", lista);
                 return "views/empleado/mi_historial";
@@ -72,9 +99,12 @@ public class AsistenciaController {
                         .anyMatch(a -> a.getFecha().isEqual(java.time.LocalDate.now()) && a.getHoraSalida() == null);
 
                 boolean finJornada = asistenciaService.verificarFinJornada(usuario.getId());
+                boolean esDiaJustificado = !reporteDiario.isEmpty() && reporteDiario.stream()
+                        .allMatch(t -> "JUSTIFICADA".equals(t.getEstado()));
 
                 model.addAttribute("hayTurnoAbierto", hayTurnoAbierto);
                 model.addAttribute("finJornada", finJornada);
+                model.addAttribute("esDiaJustificado", esDiaJustificado);
 
                 return "views/empleado/dashboard";
             }
@@ -164,7 +194,7 @@ public class AsistenciaController {
     @GetMapping("/admin/exportar/excel")
     public ResponseEntity<InputStreamResource> descargarExcel() throws IOException {
         List<Asistencia> lista = asistenciaService.listarTodo();
-        ByteArrayInputStream in = reporteService.generarExcel(lista);
+        ByteArrayInputStream in = reporteService.generarListadoExcel(lista);
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Disposition", "attachment; filename=asistencias.xlsx");
@@ -178,7 +208,7 @@ public class AsistenciaController {
     @GetMapping("/admin/exportar/pdf")
     public ResponseEntity<InputStreamResource> descargarPDF() {
         List<Asistencia> lista = asistenciaService.listarTodo();
-        ByteArrayInputStream in = reporteService.generarPDF(lista);
+        ByteArrayInputStream in = reporteService.generarListadoPDF(lista);
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Disposition", "attachment; filename=asistencias.pdf");

@@ -1,101 +1,134 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <title>Mis Asistencias</title>
+    <title>Mis Asistencias | Grupo Peruana</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-
-    <script type="importmap">
-      { "imports": { "@material/web/": "https://esm.run/@material/web/" } }
-    </script>
-    <script type="module">import '@material/web/all.js';</script>
-
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/theme.css">
     <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
-        
-        .header { margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-        h1 { margin: 0; color: #1f1f1f; font-size: 24px; }
-
-        /* Tarjeta de la tabla */
-        .card-table {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            overflow: hidden;
-            padding-bottom: 10px;
-        }
-
-        table { width: 100%; border-collapse: collapse; }
-        
-        th { text-align: left; padding: 16px; color: #444746; font-size: 14px; background: #fafafa; border-bottom: 1px solid #e0e0e0; }
-        td { padding: 16px; border-bottom: 1px solid #f0f0f0; color: #1f1f1f; font-size: 14px; }
-        
-        /* Badges de estado */
-        .badge { padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; display: inline-block;}
-        .bdg-qr { background: #e8f5e9; color: #1b5e20; border: 1px solid #c8e6c9; }
-        .bdg-gps { background: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; }
-
+        .page-header { margin-bottom: 24px; animation: fadeIn 0.4s ease-out; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <md-icon-button href="${pageContext.request.contextPath}/empleado">
-            <span class="material-symbols-outlined">arrow_back</span>
-        </md-icon-button>
-        <h1>Mi Historial de Asistencias</h1>
-    </div>
+    <jsp:include page="../shared/sidebar.jsp" />
+    <div class="main-content">
+        <jsp:include page="../shared/header.jsp" />
 
-    <div class="card-table">
-        <table>
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Entrada</th>
-                    <th>Salida</th>
-                    <th>Método</th>
-                    <th>Detalle</th>
-                </tr>
-            </thead>
-            <tbody>
-                <c:forEach items="${listaAsistencia}" var="a">
-                    <tr>
-                        <td style="font-weight: 500;">${a.fecha}</td>
-                        <td style="color: #006C4C;">${a.horaEntrada}</td>
-                        <td>
-                            <c:if test="${not empty a.horaSalida}">${a.horaSalida}</c:if>
-                            <c:if test="${empty a.horaSalida}"><span style="color:#999">--:--</span></c:if>
-                        </td>
-                        <td>
-                            <c:choose>
-                                <c:when test="${a.modo == 'QR' || a.modo == 'QR_DINAMICO'}">
-                                    <span class="badge bdg-qr">QR Code</span>
-                                </c:when>
-                                <c:otherwise>
-                                    <span class="badge bdg-gps">Ubicación</span>
-                                </c:otherwise>
-                            </c:choose>
-                        </td>
-                        <td style="color:#666;">${a.observacion}</td>
-                    </tr>
-                </c:forEach>
-                
-                <c:if test="${empty listaAsistencia}">
-                    <tr>
-                        <td colspan="5" style="text-align:center; padding: 40px; color: #757575;">
-                            No tienes registros de asistencia todavía.
-                        </td>
-                    </tr>
-                </c:if>
-            </tbody>
-        </table>
-    </div>
+        <div class="container">
+            <div class="page-header">
+                <h1>Mi Historial</h1>
+                <p style="color: var(--md-sys-color-secondary);">Registro detallado de tus asistencias</p>
+            </div>
 
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Entrada</th>
+                                <th>Salida</th>
+                                <th>Método</th>
+                                <th>Cargo</th>
+                                <th>Ubicación</th>
+                                <th>Evidencia</th>
+                                <th>Tardanza/Extra</th>
+                                <th>Observación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach items="${listaAsistencia}" var="a">
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 500;">${a.fecha}</div>
+                                    </td>
+                                    <td style="color: var(--md-sys-color-success); font-weight: 500;">
+                                        ${a.horaEntrada}
+                                    </td>
+                                    <td>
+                                        <c:if test="${not empty a.horaSalida}">${a.horaSalida}</c:if>
+                                        <c:if test="${empty a.horaSalida}"><span style="color: var(--md-sys-color-outline);">--:--</span></c:if>
+                                    </td>
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${a.modo == 'QR' || a.modo == 'QR_DINAMICO'}">
+                                                <span class="chip chip-success" style="height: 24px; font-size: 0.75rem;">
+                                                    <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">qr_code</span> QR
+                                                </span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="chip chip-info" style="height: 24px; font-size: 0.75rem;">
+                                                    <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">pin_drop</span> GPS
+                                                </span>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </td>
+                                    <td>${a.empleado.rol}</td>
+                                    <td>
+                                        <c:if test="${not empty a.latitud}">
+                                            <a href="https://www.google.com/maps?q=${a.latitud},${a.longitud}" target="_blank" class="btn-secondary" style="display: inline-flex; width: 32px; height: 32px; border-radius: 50%; padding: 0; align-items: center; justify-content: center; text-decoration: none; border: 1px solid var(--md-sys-color-outline-variant);">
+                                                <span class="material-symbols-outlined" style="font-size: 18px;">map</span>
+                                            </a>
+                                        </c:if>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <c:if test="${not empty a.fotoUrl}">
+                                                 <a href="${a.fotoUrl}" target="_blank" title="Foto Entrada" 
+                                                    style="color: var(--md-sys-color-primary); transition: transform 0.2s; display: inline-block;">
+                                                    <span class="material-symbols-outlined">photo_camera</span>
+                                                 </a>
+                                            </c:if>
+                                            <c:if test="${not empty a.fotoUrlSalida}">
+                                                 <a href="${a.fotoUrlSalida}" target="_blank" title="Foto Salida" 
+                                                    style="color: var(--md-sys-color-secondary); transition: transform 0.2s; display: inline-block;">
+                                                    <span class="material-symbols-outlined">photo_camera</span>
+                                                 </a>
+                                            </c:if>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="font-size: 0.85rem;">
+                                            <c:if test="${not empty a.minutosTardanza && a.minutosTardanza > 0}">
+                                                <div style="color: var(--md-sys-color-error); font-weight: 500;">
+                                                    +${a.minutosTardanza}m tard.
+                                                </div>
+                                            </c:if>
+                                            <c:if test="${not empty a.minutosExtras && a.minutosExtras > 0}">
+                                                 <div style="color: var(--md-sys-color-success); font-weight: 500;">
+                                                    +${a.minutosExtras}m extra
+                                                 </div>
+                                            </c:if>
+                                            <c:if test="${(empty a.minutosTardanza || a.minutosTardanza == 0) && (empty a.minutosExtras || a.minutosExtras == 0)}">
+                                                <span style="color: var(--md-sys-color-outline);">-</span>
+                                            </c:if>
+                                        </div>
+                                    </td>
+                                    <td style="color: var(--md-sys-color-secondary); max-width: 200px; white-space: normal; font-size: 0.9em;">
+                                        ${a.observacion}
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                            
+                            <c:if test="${empty listaAsistencia}">
+                                <tr>
+                                    <td colspan="9" style="text-align:center; padding: 60px;">
+                                        <span class="material-symbols-outlined" style="font-size: 48px; color: var(--md-sys-color-outline-variant);">event_busy</span>
+                                        <div style="margin-top: 8px; color: var(--md-sys-color-secondary);">No tienes registros de asistencia todavía.</div>
+                                    </td>
+                                </tr>
+                            </c:if>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
 </body>
 </html>

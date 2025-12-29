@@ -1,6 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 
+
+
 <%
     // Fix: When using Spring MVC, getServletPath() may return the JSP path (e.g., /views/foo.jsp)
     // instead of the controller path (e.g., /foo). We need the original request URI.

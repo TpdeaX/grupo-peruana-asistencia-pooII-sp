@@ -2,7 +2,8 @@ package com.grupoperuana.sistema.beans;
 
 import jakarta.persistence.*;
 import java.sql.Timestamp;
-
+import java.util.HashSet;
+import java.util.Set;
 import java.io.Serializable;
 
 @Entity
@@ -23,6 +24,7 @@ public class Empleado implements Serializable {
 
     @Column(nullable = false, length = 15, unique = true)
     private String dni;
+    
 
     @Column(nullable = false)
     private String password;
@@ -45,6 +47,15 @@ public class Empleado implements Serializable {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Timestamp createdAt;
+    
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "empleado_permiso",
+        joinColumns = @JoinColumn(name = "empleado_id"),
+        inverseJoinColumns = @JoinColumn(name = "permiso_id")
+    )
+    private Set<Permiso> permisos = new HashSet<>();
+
 
     public Empleado() {
     }
@@ -57,7 +68,15 @@ public class Empleado implements Serializable {
         this.rol = rol;
     }
 
-    public int getId() {
+    public Set<Permiso> getPermisos() {
+		return permisos;
+	}
+
+	public void setPermisos(Set<Permiso> permisos) {
+		this.permisos = permisos;
+	}
+
+	public int getId() {
         return id;
     }
 

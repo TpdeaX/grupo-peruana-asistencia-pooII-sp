@@ -69,7 +69,8 @@ public class AuthController {
             }
 
             if ("ADMIN".equals(emp.getRol())) {
-                return "redirect:/admin";
+            	return "redirect:/empleados?accion=dashboard";
+
             } else {
                 return "redirect:/empleado";
             }

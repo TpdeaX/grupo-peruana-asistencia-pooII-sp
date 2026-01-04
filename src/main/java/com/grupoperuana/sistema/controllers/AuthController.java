@@ -24,13 +24,13 @@ public class AuthController {
     @GetMapping
     public String auth(HttpSession session) {
 
-        return "redirect:/index.jsp";
+        return "redirect:/login";
     }
 
     @GetMapping("/logout")
     public String logout(HttpSession session) {
         session.invalidate();
-        return "redirect:/index.jsp";
+        return "redirect:/login";
     }
 
     @PostMapping("/login")
@@ -69,14 +69,14 @@ public class AuthController {
             }
 
             if ("ADMIN".equals(emp.getRol())) {
-            	return "redirect:/empleados?accion=dashboard";
+                return "redirect:/dashboard";
 
             } else {
                 return "redirect:/empleado";
             }
         } else {
             session.setAttribute("error", "Credenciales incorrectas");
-            return "redirect:/index.jsp";
+            return "redirect:/login";
         }
     }
 }

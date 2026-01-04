@@ -87,6 +87,8 @@
 </head>
 <body>
 
+    <jsp:include page="../shared/loading-screen.jsp" />
+    <jsp:include page="../shared/console-warning.jsp" />
     <jsp:include page="../shared/sidebar.jsp" />
 
     <div class="main-content">

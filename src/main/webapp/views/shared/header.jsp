@@ -319,11 +319,8 @@
     </div>
 
     <div class="header-actions">
-        <!-- Notifications -->
-        <div class="icon-btn">
-            <span class="material-symbols-outlined">notifications</span>
-            <span class="notification-badge"></span>
-        </div>
+        <!-- Notifications Panel -->
+        <jsp:include page="/views/shared/notification-panel.jsp" />
         
         <!-- User Profile -->
         <div class="user-profile-container">
@@ -520,3 +517,6 @@
         document.body.classList.remove('theme-transition');
     })();
 </script>
+
+<jsp:include page="/views/shared/config-vars.jsp" />
+<jsp:include page="/views/shared/image-loader.jsp" />

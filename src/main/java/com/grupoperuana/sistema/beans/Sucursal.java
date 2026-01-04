@@ -86,4 +86,15 @@ public class Sucursal implements Serializable {
     public void setLongitud(Double longitud) {
         this.longitud = longitud;
     }
+
+    @Column(name = "tolerancia_metros", columnDefinition = "int default 100")
+    private Integer toleranciaMetros = 100;
+
+    public Integer getToleranciaMetros() {
+        return toleranciaMetros;
+    }
+
+    public void setToleranciaMetros(Integer toleranciaMetros) {
+        this.toleranciaMetros = toleranciaMetros;
+    }
 }

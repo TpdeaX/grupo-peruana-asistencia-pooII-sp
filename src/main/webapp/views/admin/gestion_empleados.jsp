@@ -84,6 +84,8 @@
 </head>
 <body>
     <div id="toast-mount-point" style="display:none;"></div>
+    <jsp:include page="../shared/loading-screen.jsp" />
+    <jsp:include page="../shared/console-warning.jsp" />
     <jsp:include page="../shared/sidebar.jsp" />
     <div class="main-content">
         <jsp:include page="../shared/header.jsp" />
@@ -111,7 +113,7 @@
             </div>
 
             <div class="card" style="margin-bottom: 24px; padding: 24px; background-color: var(--md-sys-color-surface); animation: fade-in-down 0.5s ease-out;">
-                <form id="filterForm" action="${pageContext.request.contextPath}/empleados" method="get">
+                <form id="filterForm" action="${pageContext.request.contextPath}/empleados/filter" method="post">
                     <input type="hidden" name="page" id="pageInput" value="${pagina.number}">
                     
                     <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; align-items: start;">
@@ -188,6 +190,10 @@
                 </form>
             </div>
 
+
+            <!-- ... (Code omitted for brevity until script section) ... -->
+
+
             <div class="card" style="animation: fade-in-down 0.6s ease-out;">
                 <div class="table-container">
                     <table class="compact-table" style="width: 100%;">
@@ -227,7 +233,8 @@
                                                 data-sueldo="${e.sueldoBase}"
                                                 data-rol="${e.rol}"
                                                 data-modalidad="${e.tipoModalidad}"
-                                                data-sucursal="${e.sucursal != null ? e.sucursal.id : ''}">
+                                                data-sucursal="${e.sucursal != null ? e.sucursal.id : ''}"
+                                                data-permisos="${e.permisosString}">
                                                 <md-icon>edit</md-icon>
                                             </md-icon-button>
                                             
@@ -310,7 +317,8 @@
                 <div class="modal-form-grid">
                     <div class="full-width">
                         <div class="dni-group">
-                            <md-outlined-text-field label="DNI" name="dni" id="input-dni" type="number" maxlength="8" required>
+                            <md-outlined-text-field label="DNI" name="dni" id="input-dni" type="number" maxlength="8" required
+                                value="${empleado.dni}">
                             </md-outlined-text-field>
                             <md-filled-tonal-button type="button" id="btn-consultar-dni" style="height: 56px;">
                                 <md-icon>search</md-icon>
@@ -319,80 +327,91 @@
                         <div id="dniError">Este DNI ya está registrado.</div>
                     </div>
 
-                    <md-outlined-text-field label="Nombres" name="nombres" id="input-nombres" required></md-outlined-text-field>
-                    <md-outlined-text-field label="Apellidos" name="apellidos" id="input-apellidos" required></md-outlined-text-field>
-                    <md-outlined-text-field label="Sueldo Base (S/.)" name="sueldoBase" id="input-sueldo" type="number" step="0.01"></md-outlined-text-field>
+                    <md-outlined-text-field label="Nombres" name="nombres" id="input-nombres" required value="${empleado.nombres}"></md-outlined-text-field>
+                    <md-outlined-text-field label="Apellidos" name="apellidos" id="input-apellidos" required value="${empleado.apellidos}"></md-outlined-text-field>
+                    <md-outlined-text-field label="Sueldo Base (S/.)" name="sueldoBase" id="input-sueldo" type="number" step="0.01" value="${empleado.sueldoBase}"></md-outlined-text-field>
                     
                     <div class="full-width">
-                        <md-outlined-select label="Rol" name="rol" id="input-rol">
+                        <md-outlined-select label="Rol" id="input-rol">
+                        <input type="hidden" name="rol" id="hidden-rol" value="EMPLEADO">
                             <md-select-option value="EMPLEADO">
-                                <div slot="headline">EMPLEADO</div>
+                                <md-icon slot="start">badge</md-icon>
+                                <div slot="headline">Empleado</div>
+                                <div slot="supporting-text">Acceso solo a su perfil y asistencia</div>
                             </md-select-option>
                             <md-select-option value="ADMIN">
-                                <div slot="headline">ADMIN</div>
+                                <md-icon slot="start">admin_panel_settings</md-icon>
+                                <div slot="headline">Administrador</div>
+                                <div slot="supporting-text">Acceso completo al sistema</div>
                             </md-select-option>
-                            <md-select-option value="PERSONALIZADO">
-                                <div slot="headline">PERSONALIZADO</div>
+                            <md-select-option value="EMPLEADO_RESTRINGIDO">
+                                <md-icon slot="start">person_alert</md-icon>
+                                <div slot="headline">Empleado con permisos extra</div>
+                                <div slot="supporting-text">Empleado + permisos específicos</div>
+                            </md-select-option>
+                            <md-select-option value="ADMIN_RESTRINGIDO">
+                                <md-icon slot="start">admin_panel_settings</md-icon>
+                                <div slot="headline">Administrador restringido</div>
+                                <div slot="supporting-text">Admin con acceso limitado</div>
                             </md-select-option>
                         </md-outlined-select>
 
-                        <div id="modal-permisos-container" style="display: none; background: var(--md-sys-color-surface-container-low); padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid var(--md-sys-color-outline-variant);">
-                            <p style="margin: 0 0 12px 0; font-weight: 500; color: var(--md-sys-color-primary); font-size: 0.9rem;">Seleccionar Permisos:</p>
-                            
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <md-checkbox name="permisos" value="GESTIONAR_EMPLEADOS" touch-target="wrapper"></md-checkbox>
-                                    <span style="font-size: 0.9rem;">Gestionar Empleados</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <md-checkbox name="permisos" value="VER_REPORTES" touch-target="wrapper"></md-checkbox>
-                                    <span style="font-size: 0.9rem;">Ver Reportes</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <md-checkbox name="permisos" value="APROBAR_JUSTIFICACIONES" touch-target="wrapper"></md-checkbox>
-                                    <span style="font-size: 0.9rem;">Aprobar Justificaciones</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <md-checkbox name="permisos" value="CONFIGURACION_SISTEMA" touch-target="wrapper"></md-checkbox>
-                                    <span style="font-size: 0.9rem;">Configuración Sistema</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <md-checkbox name="permisos" value="EDITAR_HORARIOS" touch-target="wrapper"></md-checkbox>
-                                    <span style="font-size: 0.9rem;">Editar Horarios</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                    <md-checkbox name="permisos" value="VER_DASHBOARD_TOTAL" touch-target="wrapper"></md-checkbox>
-                                    <span style="font-size: 0.9rem;">Ver Dashboard Total</span>
-                                </label>
+                        <div id="modal-permisos-container" style="display: none; background: linear-gradient(135deg, var(--md-sys-color-surface-container-low) 0%, var(--md-sys-color-surface-container) 100%); padding: 20px; border-radius: 12px; margin-top: 16px; border: 1px solid var(--md-sys-color-outline-variant); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                                <span class="material-symbols-outlined" style="color: var(--md-sys-color-primary); font-size: 24px;">shield_person</span>
+                                <div>
+                                    <p style="margin: 0; font-weight: 600; color: var(--md-sys-color-on-surface); font-size: 0.95rem;">Configurar Permisos</p>
+                                    <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: var(--md-sys-color-secondary);" id="permisos-helper-text">Selecciona los módulos a los que tendrá acceso</p>
+                                </div>
                             </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <c:forEach var="p" items="${listaTodosPermisos}">
+                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px 12px; background: var(--md-sys-color-surface); border-radius: 8px; border: 1px solid var(--md-sys-color-outline-variant); transition: all 0.2s;">
+                                        <md-checkbox value="${p.nombre}" data-permiso="${p.nombre}" touch-target="wrapper"></md-checkbox>
+                                        <div style="flex: 1;">
+                                            <span style="font-size: 0.9rem; font-weight: 500; color: var(--md-sys-color-on-surface);">${fn:replace(p.nombre, '_', ' ')}</span>
+                                        </div>
+                                    </label>
+                                </c:forEach>
+                            </div>
+                            
+                            <c:if test="${empty listaTodosPermisos}">
+                                <div style="text-align: center; padding: 24px; color: var(--md-sys-color-secondary);">
+                                    <span class="material-symbols-outlined" style="font-size: 32px; opacity: 0.5;">info</span>
+                                    <p style="margin: 8px 0 0 0;">No hay permisos configurados en el sistema.</p>
+                                </div>
+                            </c:if>
                         </div>
                     </div>
 
                     <div>
-                        <md-outlined-select label="Modalidad" name="tipoModalidad" id="input-modalidad">
-                            <md-select-option value="OBLIGADO">
+                        <md-outlined-select label="Modalidad" id="input-modalidad">
+                        <input type="hidden" name="tipoModalidad" id="hidden-modalidad" value="OBLIGADO">
+                            <md-select-option value="OBLIGADO" ${empleado.tipoModalidad == 'OBLIGADO' ? 'selected' : ''}>
                                 <div slot="headline">OBLIGADO (Horario Rotativo)</div>
                             </md-select-option>
-                            <md-select-option value="FIJO">
+                            <md-select-option value="FIJO" ${empleado.tipoModalidad == 'FIJO' ? 'selected' : ''}>
                                 <div slot="headline">FIJO (Rol Fijo)</div>
                             </md-select-option>
-                            <md-select-option value="LIBRE">
+                            <md-select-option value="LIBRE" ${empleado.tipoModalidad == 'LIBRE' ? 'selected' : ''}>
                                 <div slot="headline">LIBRE (Asistencia Libre)</div>
                             </md-select-option>
                         </md-outlined-select>
                     </div>
 
                     <div>
-                        <md-outlined-select label="Sucursal" name="sucursal.id" id="input-sucursal">
+                        <md-outlined-select label="Sucursal" id="input-sucursal">
                             <md-select-option value="">
                                 <div slot="headline">-- Seleccionar --</div>
                             </md-select-option>
                             <c:forEach var="s" items="${listaSucursales}">
-                                <md-select-option value="${s.id}">
+                                <md-select-option value="${s.id}" ${empleado.sucursal != null && empleado.sucursal.id == s.id ? 'selected' : ''}>
                                     <div slot="headline">${s.nombre}</div>
                                 </md-select-option>
                             </c:forEach>
                         </md-outlined-select>
+                        <input type="hidden" name="sucursal.id" id="hidden-sucursal-id" value="">
                         <p style="margin: 4px 0 0 4px; font-size: 0.75rem; color: var(--md-sys-color-secondary);">* Opcional</p>
                     </div>
 
@@ -461,10 +480,34 @@
                 
                 // Clear fields
                 formEmpleado.reset();
+                
+                // Reset hidden inputs to default values
+                const hiddenRol = document.getElementById('hidden-rol');
+                if (hiddenRol) hiddenRol.value = 'EMPLEADO';
+                
+                const hiddenModalidad = document.getElementById('hidden-modalidad');
+                if (hiddenModalidad) hiddenModalidad.value = 'OBLIGADO';
+                
+                // Recreate hidden sucursal if it was removed
+                let hiddenSucursal = document.getElementById('hidden-sucursal-id');
+                if (!hiddenSucursal) {
+                    hiddenSucursal = document.createElement('input');
+                    hiddenSucursal.type = 'hidden';
+                    hiddenSucursal.name = 'sucursal.id';
+                    hiddenSucursal.id = 'hidden-sucursal-id';
+                    hiddenSucursal.value = '';
+                    document.getElementById('input-sucursal').parentElement.appendChild(hiddenSucursal);
+                }
+                hiddenSucursal.value = '';
 
                 // Reset Checkboxes Logic (Ocultar siempre al crear nuevo al principio)
                 const permisosDiv = document.getElementById('modal-permisos-container');
-                if(permisosDiv) permisosDiv.style.display = 'none';
+                if(permisosDiv) {
+                    permisosDiv.style.display = 'none';
+                    // Uncheck all checkboxes
+                    const checks = permisosDiv.querySelectorAll('md-checkbox');
+                    checks.forEach(c => c.checked = false);
+                }
                 
                 // Show Password and Enable it
                 const passContainer = document.getElementById('password-container');
@@ -533,18 +576,67 @@
                 document.getElementById('input-dni').value = data.dni;
                 document.getElementById('input-sueldo').value = data.sueldo;
                 
-                // Selects
+                // Selects and their hidden inputs
                 document.getElementById('input-rol').value = data.rol;
+                const hiddenRol = document.getElementById('hidden-rol');
+                if (hiddenRol) hiddenRol.value = data.rol || 'EMPLEADO';
+                
                 document.getElementById('input-modalidad').value = data.modalidad;
+                const hiddenModalidad = document.getElementById('hidden-modalidad');
+                if (hiddenModalidad) hiddenModalidad.value = data.modalidad || 'OBLIGADO';
+                
                 document.getElementById('input-sucursal').value = data.sucursal;
+                // Recreate hidden sucursal if it was removed
+                let hiddenSucursal = document.getElementById('hidden-sucursal-id');
+                if (!hiddenSucursal) {
+                    hiddenSucursal = document.createElement('input');
+                    hiddenSucursal.type = 'hidden';
+                    hiddenSucursal.name = 'sucursal.id';
+                    hiddenSucursal.id = 'hidden-sucursal-id';
+                    document.getElementById('input-sucursal').parentElement.appendChild(hiddenSucursal);
+                }
+                hiddenSucursal.value = data.sucursal || '';
 
-                // LOGICA PERMISOS PERSONALIZADOS
+                // LOGICA PERMISOS RESTRINGIDOS
                 const permisosDiv = document.getElementById('modal-permisos-container');
+                const permisosHelper = document.getElementById('permisos-helper-text');
                 if(permisosDiv) {
-                    if (data.rol === 'PERSONALIZADO') {
+                    if (data.rol === 'ADMIN_RESTRINGIDO' || data.rol === 'EMPLEADO_RESTRINGIDO') {
                         permisosDiv.style.display = 'block';
+                        if (permisosHelper) {
+                            permisosHelper.textContent = data.rol === 'ADMIN_RESTRINGIDO' 
+                                ? 'Deselecciona los módulos que NO tendrá acceso'
+                                : 'Selecciona los permisos adicionales para este empleado';
+                        }
                     } else {
                         permisosDiv.style.display = 'none';
+                    }
+                    // Uncheck all checkboxes by default when editing
+                    const checks = permisosDiv.querySelectorAll('md-checkbox');
+                    checks.forEach(c => c.checked = false);
+
+                    // Mark existing permissions
+                    if (data.permisos && data.permisos.trim() !== '') {
+                        const arr = data.permisos.split(',');
+                        
+                        // Usar setTimeout para asegurar que los componentes MD estén listos
+                        setTimeout(() => {
+                            arr.forEach(p => {
+                                const permisoTrimmed = p.trim();
+                                
+                                // Buscar por texto del label (Estrategia robusta para MD Web Components)
+                                const allLabels = permisosDiv.querySelectorAll('label');
+                                allLabels.forEach(label => {
+                                    const texto = label.textContent.trim().replace(/ /g, '_');
+                                    if (texto === permisoTrimmed) {
+                                        const chkInLabel = label.querySelector('md-checkbox');
+                                        if (chkInLabel) {
+                                            chkInLabel.checked = true;
+                                        }
+                                    }
+                                });
+                            });
+                        }, 200);
                     }
                 }
 
@@ -572,7 +664,62 @@
                     if(!pass.value) { pass.error = true; valid = false; }
                     else { pass.error = false; }
                 }
-                if(valid) formEmpleado.submit();
+
+                if(valid) {
+                    // Copy values from md-outlined-select to hidden inputs
+                    // This is necessary because Material Design Web components don't participate
+                    // in form submission the same way native HTML elements do
+                    
+                    // Handle rol
+                    const rolSelect = document.getElementById('input-rol');
+                    const hiddenRol = document.getElementById('hidden-rol');
+                    if (rolSelect && hiddenRol) {
+                        hiddenRol.value = rolSelect.value || 'EMPLEADO';
+                    }
+                    
+                    // Handle modalidad
+                    const modalidadSelect = document.getElementById('input-modalidad');
+                    const hiddenModalidad = document.getElementById('hidden-modalidad');
+                    if (modalidadSelect && hiddenModalidad) {
+                        hiddenModalidad.value = modalidadSelect.value || 'OBLIGADO';
+                    }
+                    
+                    // Manual handling for md-checkbox permissions
+                    // Remove any existing hidden inputs for permissions to avoid duplicates
+                    const existingHiddens = formEmpleado.querySelectorAll('input[type="hidden"][name="permisosSeleccionados"]');
+                    existingHiddens.forEach(h => h.remove());
+
+                    const permisosDiv = document.getElementById('modal-permisos-container');
+                    if (permisosDiv && permisosDiv.style.display !== 'none') {
+                        const checkboxes = permisosDiv.querySelectorAll('md-checkbox');
+                        checkboxes.forEach(chk => {
+                            if (chk.checked) {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'permisosSeleccionados';
+                                input.value = chk.value;
+                                formEmpleado.appendChild(input);
+                            }
+                        });
+                    }
+
+                    // Handle sucursal.id - copy value from md-outlined-select to hidden input
+                    // If empty, remove the hidden input to avoid binding errors with empty string to Integer
+                    const sucursalSelect = document.getElementById('input-sucursal');
+                    const hiddenSucursal = document.getElementById('hidden-sucursal-id');
+                    
+                    if (sucursalSelect && hiddenSucursal) {
+                        const sucursalValue = sucursalSelect.value;
+                        if (sucursalValue && sucursalValue !== '' && sucursalValue !== 'null') {
+                            hiddenSucursal.value = sucursalValue;
+                        } else {
+                            // Remove the hidden input to avoid sending empty sucursal.id
+                            hiddenSucursal.remove();
+                        }
+                    }
+
+                    formEmpleado.submit();
+                }
             }
 
             function abrirModalEliminar(id) {
@@ -597,26 +744,123 @@
                 document.getElementById('form-password').submit();
             }
 
+            // --- GLOBAL FUNCTIONS ---
+            
+            // Toast Helper (Global)
+            function showToast(title, message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                
+                let iconName = 'info';
+                if(type === 'success') iconName = 'check_circle';
+                if(type === 'error') iconName = 'error';
+                if(type === 'warning') iconName = 'warning';
+
+                toast.innerHTML = `
+                    <div class="toast-icon"><span class="material-symbols-outlined">\${iconName}</span></div>
+                    <div class="toast-content">
+                        <div class="toast-title">\${title}</div>
+                        <div class="toast-message">\${message}</div>
+                    </div>
+                    <div class="toast-progress"></div>
+                `;
+
+                document.body.appendChild(toast);
+                
+                // Trigger animation
+                requestAnimationFrame(() => {
+                    toast.classList.add('show');
+                });
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 500);
+                }, 3000);
+            }
+
             // --- LISTENERS EXTRA ---
             document.addEventListener('DOMContentLoaded', () => {
+                // Fix for Material Design Dialog Scrim/Backdrop
+                if (typeof fixDialogScrim === 'function') {
+                    fixDialogScrim(['modal-empleado', 'modal-eliminar', 'modal-password']);
+                }
+
+                // 1. DNI Logic
                 // 1. DNI Logic
                 const btnConsultar = document.getElementById('btn-consultar-dni');
                 const dniInput = document.getElementById('input-dni');
                 if(btnConsultar && dniInput) {
-                    btnConsultar.addEventListener('click', () => {
+                    btnConsultar.addEventListener('click', async () => {
                         const dni = dniInput.value;
-                        if (!dni || dni.length !== 8) return;
-                        // Logica de consulta DNI iría aquí...
+                        if (!dni || dni.length !== 8) {
+                            showToast('Error', 'El DNI debe tener 8 dígitos', 'error');
+                            return;
+                        }
+
+                        // UI Loading State
+                        const originalIcon = btnConsultar.innerHTML;
+                        btnConsultar.disabled = true;
+                        // Use inline HTML for spinner since we are inside a module script scope effectively (or just global)
+                        btnConsultar.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">refresh</span>';
+                        
+                        try {
+                            // Check context path availability. If outside JSP scope, hardcode or get from meta. 
+                            // Fortunately this is inside the JSP file.
+                            const response = await fetch('${pageContext.request.contextPath}/api/dni/' + dni);
+                            const data = await response.json();
+
+                            if (data.ok && data.datos) {
+                                document.getElementById('input-nombres').value = data.datos.nombres;
+                                const apellidos = data.datos.apePaterno + (data.datos.apeMaterno ? ' ' + data.datos.apeMaterno : '');
+                                document.getElementById('input-apellidos').value = apellidos;
+                                
+                                // Auto-focus next field
+                                document.getElementById('input-sueldo').focus();
+                                showToast('Éxito', 'Datos encontrados correctamente', 'success');
+                                document.getElementById('dniError').style.display = 'none';
+                            } else {
+                                showToast('Atención', data.mensaje || 'No se encontraron datos', 'warning');
+                                document.getElementById('dniError').innerText = data.mensaje || 'No encontrado';
+                                document.getElementById('dniError').style.display = 'block';
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            showToast('Error', 'Error de conexión con el servicio', 'error');
+                        } finally {
+                            btnConsultar.disabled = false;
+                            btnConsultar.innerHTML = originalIcon;
+                        }
                     });
+                }
+
+
+
+                // Simple spinner animation style if not present
+                if (!document.getElementById('spinner-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'spinner-style';
+                    style.innerHTML = '@keyframes spin { 100% { transform: rotate(360deg); } }';
+                    document.head.appendChild(style);
                 }
 
                 // 2. ROL CHANGE LISTENER (Mostrar/Ocultar Checkboxes)
                 const inputRol = document.getElementById('input-rol');
                 const permisosDiv = document.getElementById('modal-permisos-container');
+                const permisosHelper = document.getElementById('permisos-helper-text');
+                
                 if(inputRol && permisosDiv) {
                     inputRol.addEventListener('change', () => {
-                        if (inputRol.value === 'PERSONALIZADO') {
+                        const rolValue = inputRol.value;
+                        if (rolValue === 'ADMIN_RESTRINGIDO' || rolValue === 'EMPLEADO_RESTRINGIDO') {
                             permisosDiv.style.display = 'block';
+                            // Update helper text based on role
+                            if (permisosHelper) {
+                                if (rolValue === 'ADMIN_RESTRINGIDO') {
+                                    permisosHelper.textContent = 'Deselecciona los módulos que NO tendrá acceso';
+                                } else {
+                                    permisosHelper.textContent = 'Selecciona los permisos adicionales para este empleado';
+                                }
+                            }
                         } else {
                             permisosDiv.style.display = 'none';
                             // Opcional: Desmarcar checkboxes
@@ -626,7 +870,46 @@
                     });
                 }
             });
+
+            // --- AUTO OPEN MODAL ON ERROR ---
+            document.addEventListener('DOMContentLoaded', () => {
+                <c:if test="${not empty abrirModal}">
+                    const modal = document.getElementById('modal-empleado');
+                    const empId = "${empleado.id}";
+                    
+                    if(empId && empId !== '0' && empId !== '') {
+                        document.getElementById('modal-title').innerText = "Editar Empleado";
+                        document.querySelector('#modal-empleado md-icon[slot="icon"]').innerText = "edit";
+                        document.getElementById('empleado-id').value = empId;
+                        document.getElementById('form-accion').value = "guardar";
+                    } else {
+                        document.getElementById('modal-title').innerText = "Nuevo Empleado";
+                        document.querySelector('#modal-empleado md-icon[slot="icon"]').innerText = "person_add";
+                        document.getElementById('empleado-id').value = "0";
+                         document.getElementById('form-accion').value = "guardar";
+                    }
+                    
+                     // Handle Permissions Persistence for restricted role logic
+                    const inputRol = document.getElementById('input-rol');
+                    const permisosDiv = document.getElementById('modal-permisos-container');
+                    
+                    if(inputRol && (inputRol.value === 'ADMIN_RESTRINGIDO' || inputRol.value === 'EMPLEADO_RESTRINGIDO')) {
+                        permisosDiv.style.display = 'block';
+                         // Since we don't easily pass checkboxes list back via simple EL to checked attr here without looping,
+                         // users might need to re-select exact perms if they made a mistake. 
+                         // But we can add a toast to remind them.
+                    }
+
+                    modal.show();
+                    
+                    <c:if test="${not empty error}">
+                         // Use a timeout to ensure toast renders after layout
+                         setTimeout(() => showToast('Atención', '${error}', 'warning'), 500);
+                    </c:if>
+                </c:if>
+            });
         </script>
     </div>
+    <script src="${pageContext.request.contextPath}/assets/js/utils.js"></script>
 </body>
 </html>

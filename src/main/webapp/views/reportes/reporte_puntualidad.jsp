@@ -90,7 +90,7 @@
 
             <!-- Filters Card -->
             <div class="card" style="margin-bottom: 24px; padding: 24px;">
-                <form id="filterForm" action="${pageContext.request.contextPath}/reportes/puntualidad" method="get">
+                <form id="filterForm" action="${pageContext.request.contextPath}/reportes/puntualidad" method="post">
                     <input type="hidden" name="page" id="pageInput" value="${pagina != null ? pagina.number : 0}">
                     <input type="hidden" name="size" id="sizeInput" value="${size}">
                     

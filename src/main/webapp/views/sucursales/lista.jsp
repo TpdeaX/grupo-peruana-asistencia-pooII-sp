@@ -86,6 +86,8 @@
 </head>
 <body>
     <div id="toast-mount-point" style="display:none;"></div>
+    <jsp:include page="../shared/loading-screen.jsp" />
+    <jsp:include page="../shared/console-warning.jsp" />
     <jsp:include page="../shared/sidebar.jsp" />
     <div class="main-content">
         <jsp:include page="../shared/header.jsp" />
@@ -107,7 +109,7 @@
 
             <!-- Filter Form -->
             <div class="card" style="margin-bottom: 24px; padding: 24px; background-color: var(--md-sys-color-surface); animation: fade-in-down 0.5s ease-out;">
-                <form id="filterForm" action="${pageContext.request.contextPath}/sucursales" method="get">
+                <form id="filterForm" action="${pageContext.request.contextPath}/sucursales/filter" method="post">
                     <input type="hidden" name="page" id="pageInput" value="${pagina != null ? pagina.number : 0}">
                     
                     <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; align-items: start;">
@@ -136,7 +138,7 @@
                             </md-filled-button>
                         </div>
                     </div>
-                    <input type="hidden" name="size" id="sizeInput" value="${size != null ? size : 10}">
+                    <input type="hidden" name="size" id="sizeInput" value="${size != null ? size : 5}">
                 </form>
             </div>
 
@@ -173,7 +175,10 @@
                                                         data-direccion="${s.direccion}"
                                                         data-telefono="${s.telefono}"
                                                         data-lat="${s.latitud}"
-                                                        data-lng="${s.longitud}">
+                                                        data-telefono="${s.telefono}"
+                                                        data-lat="${s.latitud}"
+                                                        data-lng="${s.longitud}"
+                                                        data-tolerancia="${s.toleranciaMetros}">
                                                         <md-icon>edit</md-icon>
                                                     </md-icon-button>
                                                     
@@ -257,6 +262,7 @@
                     <md-outlined-text-field label="Nombre" name="nombre" id="input-nombre" required></md-outlined-text-field>
                     <md-outlined-text-field label="Dirección" name="direccion" id="input-direccion"></md-outlined-text-field>
                     <md-outlined-text-field label="Teléfono" name="telefono" id="input-telefono" type="tel"></md-outlined-text-field>
+                    <md-outlined-text-field label="Tolerancia (metros)" name="toleranciaMetros" id="input-tolerancia" type="number" value="100" min="1"></md-outlined-text-field>
                     
                     <div>
                          <label style="display: block; margin-bottom: 8px; font-family: 'Roboto', sans-serif; font-size: 0.875rem; color: var(--md-sys-color-on-surface-variant);">Ubicación</label>
@@ -306,13 +312,15 @@
                 
                 map = L.map('map').setView([defaultLat, defaultLng], 13);
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '© OpenStreetMap'
+                // Google Maps Layer
+                L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                    maxZoom: 20,
+                    subdomains:['mt0','mt1','mt2','mt3']
                 }).addTo(map);
 
                 map.on('click', function(e) {
                     updateMarker(e.latlng.lat, e.latlng.lng);
+                    obtenerDireccion(e.latlng.lat, e.latlng.lng);
                 });
             }
 
@@ -325,6 +333,37 @@
                 document.getElementById('sucursal-lat').value = lat;
                 document.getElementById('sucursal-lng').value = lng;
             }
+
+            function obtenerDireccion(lat, lng) {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=\${lat}&lon=\${lng}`;
+                
+                document.getElementById('input-direccion').parentElement.classList.add('loading'); // Optional visual cue
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.address) {
+                            // Construct a cleaner address
+                            const road = data.address.road || '';
+                            const houseNumber = data.address.house_number || '';
+                            const city = data.address.city || data.address.town || data.address.village || '';
+                            const district = data.address.suburb || data.address.neighbourhood || '';
+                            
+                            let fullAddress = road;
+                            if (houseNumber) fullAddress += ' ' + houseNumber;
+                            if (district) fullAddress += ', ' + district;
+                            if (city) fullAddress += ', ' + city;
+                            
+                            // Fallback if construction fails but display_name exists
+                            if (!fullAddress.trim() && data.display_name) {
+                                fullAddress = data.display_name;
+                            }
+
+                            document.getElementById('input-direccion').value = fullAddress;
+                        }
+                    })
+                    .catch(bs => console.error("Error geocoding:", bs));
+            }
             
             function abrirModalNuevo() {
                 document.getElementById('modal-title').innerText = "Nueva Sucursal";
@@ -334,7 +373,9 @@
                 
                 // Reset hidden inputs
                 document.getElementById('sucursal-lat').value = "";
+                document.getElementById('sucursal-lat').value = "";
                 document.getElementById('sucursal-lng').value = "";
+                document.getElementById('input-tolerancia').value = "100";
                 
                 modalSucursal.show();
                 
@@ -348,7 +389,25 @@
                         map.removeLayer(marker);
                         marker = null;
                     }
-                    map.setView([-12.046374, -77.042793], 13);
+                    
+                    // Try to get current location
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const lat = position.coords.latitude;
+                                const lng = position.coords.longitude;
+                                map.setView([lat, lng], 15);
+                                // Optional: Automatically set marker at current location?
+                                // Let's just center it for now as per "para no ir hasta mi ciudad para recien ver donde es"
+                            }, 
+                            (error) => {
+                                console.warn("Geolocation denied or error:", error);
+                                map.setView([-12.046374, -77.042793], 13); // Fallback to Lima
+                            }
+                        );
+                    } else {
+                        map.setView([-12.046374, -77.042793], 13);
+                    }
                 }, 200);
             }
 
@@ -360,7 +419,9 @@
                 
                 document.getElementById('input-nombre').value = data.nombre;
                 document.getElementById('input-direccion').value = data.direccion;
+                document.getElementById('input-direccion').value = data.direccion;
                 document.getElementById('input-telefono').value = data.telefono;
+                document.getElementById('input-tolerancia').value = data.tolerancia || "100";
                 
                 // Set hidden inputs
                 document.getElementById('sucursal-lat').value = data.lat || "";

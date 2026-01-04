@@ -34,25 +34,66 @@ public class JustificacionController {
         return session.getAttribute("usuario") != null;
     }
 
-    @GetMapping
-    public String listar(HttpSession session, Model model,
+    @PostMapping
+    public String filtrar(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String keyword,
             @RequestParam(required = false) String fechaSolicitud,
             @RequestParam(required = false) String fechaInicio,
             @RequestParam(required = false) String fechaFin,
-            @RequestParam(required = false) String estado) {
+            @RequestParam(required = false) String estado,
+            HttpSession session) {
+
+        session.setAttribute("just_page", page);
+        session.setAttribute("just_size", size);
+        session.setAttribute("just_keyword", keyword);
+        session.setAttribute("just_fechaSolicitud", fechaSolicitud);
+        session.setAttribute("just_fechaInicio", fechaInicio);
+        session.setAttribute("just_fechaFin", fechaFin);
+        session.setAttribute("just_estado", estado);
+
+        return "redirect:/justificaciones";
+    }
+
+    @GetMapping
+    public String listar(HttpSession session, Model model,
+            @RequestParam(required = false) String keywordParam, // Detect legacy/direct links
+            @RequestParam(required = false) String estadoParam) {
+
         if (!checkSession(session))
             return "redirect:/index.jsp";
 
+        // Legacy/Direct Link Support:
+        if (keywordParam != null || estadoParam != null) {
+            if (keywordParam != null)
+                session.setAttribute("just_keyword", keywordParam);
+            if (estadoParam != null)
+                session.setAttribute("just_estado", estadoParam);
+            return "redirect:/justificaciones";
+        }
+
         Empleado usuario = (Empleado) session.getAttribute("usuario");
 
-        // Ensure valid size
+        // Recover from Session
+        Integer pageObj = (Integer) session.getAttribute("just_page");
+        int page = (pageObj != null) ? pageObj : 0;
+
+        Integer sizeObj = (Integer) session.getAttribute("just_size");
+        int size = (sizeObj != null) ? sizeObj : 10;
         if (size < 1)
             size = 10;
         if (size > 100)
             size = 100;
+
+        String keyword = (String) session.getAttribute("just_keyword");
+        if (keyword == null)
+            keyword = "";
+
+        String fechaSolicitud = (String) session.getAttribute("just_fechaSolicitud");
+        String fechaInicio = (String) session.getAttribute("just_fechaInicio");
+        String fechaFin = (String) session.getAttribute("just_fechaFin");
+        String estado = (String) session.getAttribute("just_estado");
 
         Page<Justificacion> pageRes;
         Integer empId = null;
@@ -66,6 +107,8 @@ public class JustificacionController {
 
         model.addAttribute("lista", pageRes.getContent());
         model.addAttribute("pagina", pageRes);
+
+        // Pass back to view for form population
         model.addAttribute("keyword", keyword);
         model.addAttribute("fechaSolicitud", fechaSolicitud);
         model.addAttribute("fechaInicio", fechaInicio);
@@ -77,12 +120,7 @@ public class JustificacionController {
     }
 
     @GetMapping("/export/excel")
-    public ResponseEntity<byte[]> exportarExcel(HttpSession session,
-            @RequestParam(defaultValue = "") String keyword,
-            @RequestParam(required = false) String fechaSolicitud,
-            @RequestParam(required = false) String fechaInicio,
-            @RequestParam(required = false) String fechaFin,
-            @RequestParam(required = false) String estado) {
+    public ResponseEntity<byte[]> exportarExcel(HttpSession session) {
 
         if (!checkSession(session))
             return ResponseEntity.status(401).build();
@@ -92,6 +130,14 @@ public class JustificacionController {
         if (!"ADMIN".equals(usuario.getRol()) && !"JEFE".equals(usuario.getRol())) {
             empId = usuario.getId();
         }
+
+        String keyword = (String) session.getAttribute("just_keyword");
+        if (keyword == null)
+            keyword = "";
+        String fechaSolicitud = (String) session.getAttribute("just_fechaSolicitud");
+        String fechaInicio = (String) session.getAttribute("just_fechaInicio");
+        String fechaFin = (String) session.getAttribute("just_fechaFin");
+        String estado = (String) session.getAttribute("just_estado");
 
         List<Justificacion> list = justificacionService.listarAvanzadoSinPaginacion(empId, keyword, fechaSolicitud,
                 fechaInicio, fechaFin, estado);
@@ -110,12 +156,7 @@ public class JustificacionController {
     }
 
     @GetMapping("/export/pdf")
-    public ResponseEntity<byte[]> exportarPdf(HttpSession session,
-            @RequestParam(defaultValue = "") String keyword,
-            @RequestParam(required = false) String fechaSolicitud,
-            @RequestParam(required = false) String fechaInicio,
-            @RequestParam(required = false) String fechaFin,
-            @RequestParam(required = false) String estado) {
+    public ResponseEntity<byte[]> exportarPdf(HttpSession session) {
 
         if (!checkSession(session))
             return ResponseEntity.status(401).build();
@@ -125,6 +166,14 @@ public class JustificacionController {
         if (!"ADMIN".equals(usuario.getRol()) && !"JEFE".equals(usuario.getRol())) {
             empId = usuario.getId();
         }
+
+        String keyword = (String) session.getAttribute("just_keyword");
+        if (keyword == null)
+            keyword = "";
+        String fechaSolicitud = (String) session.getAttribute("just_fechaSolicitud");
+        String fechaInicio = (String) session.getAttribute("just_fechaInicio");
+        String fechaFin = (String) session.getAttribute("just_fechaFin");
+        String estado = (String) session.getAttribute("just_estado");
 
         List<Justificacion> list = justificacionService.listarAvanzadoSinPaginacion(empId, keyword, fechaSolicitud,
                 fechaInicio, fechaFin, estado);

@@ -34,4 +34,9 @@ public class HorarioService {
     public void eliminar(int id) {
         horarioRepository.deleteById(id);
     }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void eliminarPorEmpleadoYFecha(int empleadoId, LocalDate fecha) {
+        horarioRepository.deleteByEmpleadoIdAndFecha(empleadoId, fecha);
+    }
 }

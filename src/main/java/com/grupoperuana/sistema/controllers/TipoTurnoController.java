@@ -7,6 +7,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import jakarta.servlet.http.HttpSession;
 import com.grupoperuana.sistema.beans.TipoTurno;
 import com.grupoperuana.sistema.services.TipoTurnoService;
 
@@ -20,19 +21,54 @@ public class TipoTurnoController {
         this.tipoTurnoService = tipoTurnoService;
     }
 
-    @GetMapping
-    public String listar(@RequestParam(defaultValue = "0") int page,
+    private boolean checkSession(HttpSession session) {
+        return session.getAttribute("usuario") != null;
+    }
+
+    @PostMapping("/filter")
+    public String filtrar(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
-            @RequestParam(required = false) String keyword,
-            Model model) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<TipoTurno> pagina = tipoTurnoService.listarTipos(pageable, keyword);
+            @RequestParam(defaultValue = "") String keyword,
+            HttpSession session) {
+
+        session.setAttribute("turno_page", page);
+        session.setAttribute("turno_size", size);
+        session.setAttribute("turno_keyword", keyword);
+        return "redirect:/tipoturno";
+    }
+
+    @GetMapping
+    public String listar(Model model,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String keywordParam,
+            HttpSession session) {
+
+        if (!checkSession(session))
+            return "redirect:/index.jsp";
+
+        Integer sessionPage = (Integer) session.getAttribute("turno_page");
+        int p = (sessionPage != null) ? sessionPage : 0;
+
+        Integer sessionSize = (Integer) session.getAttribute("turno_size");
+        int s = (sessionSize != null) ? sessionSize : 5;
+        if (s < 1)
+            s = 5;
+        if (s > 100)
+            s = 100;
+
+        String k = (String) session.getAttribute("turno_keyword");
+        if (k == null)
+            k = "";
+
+        Pageable pageable = PageRequest.of(p, s);
+        Page<TipoTurno> pagina = tipoTurnoService.listarTipos(pageable, k);
 
         model.addAttribute("lista", pagina.getContent());
         model.addAttribute("pagina", pagina);
-        model.addAttribute("keyword", keyword);
-        model.addAttribute("size", size);
-        model.addAttribute("tipos", pagina.getContent()); // Keep compatibility if needed, but lista is better
+        model.addAttribute("keyword", k);
+        model.addAttribute("size", s);
+        model.addAttribute("tipos", pagina.getContent());
         return "views/admin/gestion_tipoturno";
     }
 

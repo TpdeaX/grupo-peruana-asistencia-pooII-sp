@@ -10,6 +10,10 @@ function fixDialogScrim(dialogIds) {
                 // Check if style already exists to avoid duplication
                 if(d.shadowRoot.querySelector('style[data-scrim-fix]')) return;
 
+                // Verificar si el blur modal está habilitado en la configuración
+                const blurEnabled = window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.ui_blur_modal !== false;
+                const blurCSS = blurEnabled ? 'backdrop-filter: blur(8px) !important;' : '';
+
                 const style = document.createElement('style');
                 style.setAttribute('data-scrim-fix', 'true');
                 style.textContent = `
@@ -19,7 +23,7 @@ function fixDialogScrim(dialogIds) {
                         opacity: 0 !important; 
                         pointer-events: none !important;
                         background-color: rgba(0,0,0,0.4) !important;
-                        backdrop-filter: blur(8px) !important; /* Smooth blur */
+                        ${blurCSS}
                         display: flex !important;
                         inset: 0 !important;
                         position: fixed !important;

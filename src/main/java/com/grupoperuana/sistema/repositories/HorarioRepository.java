@@ -20,4 +20,6 @@ public interface HorarioRepository extends JpaRepository<Horario, Integer> {
     List<Horario> findByFechaBetween(LocalDate start, LocalDate end);
 
     List<Horario> findByEmpleadoIdAndFechaBetween(int empleadoId, LocalDate start, LocalDate end);
+
+    void deleteByEmpleadoIdAndFecha(int empleadoId, LocalDate fecha);
 }

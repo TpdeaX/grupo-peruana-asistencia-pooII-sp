@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import jakarta.servlet.http.HttpSession;
 
 @Controller
 @RequestMapping("/sucursales")
@@ -19,19 +20,53 @@ public class SucursalController {
     @Autowired
     private SucursalService sucursalService;
 
-    @GetMapping
-    public String listar(@RequestParam(defaultValue = "0") int page,
+    private boolean checkSession(HttpSession session) {
+        return session.getAttribute("usuario") != null;
+    }
+
+    @PostMapping("/filter")
+    public String filtrar(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(required = false) String keyword,
-            Model model) {
+            HttpSession session) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        Page<Sucursal> pagina = sucursalService.listarPagina(keyword, pageable);
+        session.setAttribute("suc_page", page);
+        session.setAttribute("suc_size", size);
+        session.setAttribute("suc_keyword", keyword);
+        return "redirect:/sucursales";
+    }
+
+    @GetMapping
+    public String listar(@RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String keywordParam,
+            Model model, HttpSession session) {
+
+        if (!checkSession(session))
+            return "redirect:/index.jsp";
+
+        // Recover from session
+        Integer sessionPage = (Integer) session.getAttribute("suc_page");
+        int p = (sessionPage != null) ? sessionPage : 0;
+
+        Integer sessionSize = (Integer) session.getAttribute("suc_size");
+        int s = (sessionSize != null) ? sessionSize : 5;
+        if (s < 1)
+            s = 5;
+        if (s > 100)
+            s = 100;
+
+        String k = (String) session.getAttribute("suc_keyword");
+        if (k == null)
+            k = "";
+
+        Pageable pageable = PageRequest.of(p, s, Sort.by("id").descending());
+        Page<Sucursal> pagina = sucursalService.listarPagina(k, pageable);
 
         model.addAttribute("sucursales", pagina.getContent());
         model.addAttribute("pagina", pagina);
-        model.addAttribute("keyword", keyword);
-        model.addAttribute("size", size);
+        model.addAttribute("keyword", k);
+        model.addAttribute("size", s);
 
         return "views/sucursales/lista";
     }

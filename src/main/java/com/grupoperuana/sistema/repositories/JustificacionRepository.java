@@ -12,6 +12,8 @@ public interface JustificacionRepository extends JpaRepository<Justificacion, In
 
         List<Justificacion> findAllByOrderByFechaSolicitudDesc();
 
+        long countByEstado(String estado);
+
         // Pagination Support
         org.springframework.data.domain.Page<Justificacion> findByEmpleadoIdOrderByFechaSolicitudDesc(int empleadoId,
                         org.springframework.data.domain.Pageable pageable);

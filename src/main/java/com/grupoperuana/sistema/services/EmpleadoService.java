@@ -1,5 +1,6 @@
 package com.grupoperuana.sistema.services;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,22 +37,30 @@ public class EmpleadoService {
     }
 
     // Método para la paginación en la vista web
-    public Page<Empleado> listarAvanzado(String keyword, String rol, String modalidad, Integer sucursalId, int page, int size) {
+    public Page<Empleado> listarAvanzado(String keyword, String rol, String modalidad, Integer sucursalId, int page,
+            int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("apellidos").ascending());
-        if (keyword != null && keyword.trim().isEmpty()) keyword = null;
-        if (rol != null && rol.trim().isEmpty()) rol = null;
-        if (modalidad != null && modalidad.trim().isEmpty()) modalidad = null;
+        if (keyword != null && keyword.trim().isEmpty())
+            keyword = null;
+        if (rol != null && rol.trim().isEmpty())
+            rol = null;
+        if (modalidad != null && modalidad.trim().isEmpty())
+            modalidad = null;
         return empleadoRepository.buscarAvanzado(keyword, rol, modalidad, sucursalId, pageable);
     }
 
     // --- ESTE ES EL MÉTODO QUE FALTABA (Para Excel y PDF) ---
-    public List<Empleado> listarAvanzadoSinPaginacion(String keyword, String rol, String modalidad, Integer sucursalId) {
+    public List<Empleado> listarAvanzadoSinPaginacion(String keyword, String rol, String modalidad,
+            Integer sucursalId) {
         // Pedimos "página 0" con tamaño 10000 para traer casi todo de golpe
         Pageable pageable = PageRequest.of(0, 10000, Sort.by("apellidos").ascending());
 
-        if (keyword != null && keyword.trim().isEmpty()) keyword = null;
-        if (rol != null && rol.trim().isEmpty()) rol = null;
-        if (modalidad != null && modalidad.trim().isEmpty()) modalidad = null;
+        if (keyword != null && keyword.trim().isEmpty())
+            keyword = null;
+        if (rol != null && rol.trim().isEmpty())
+            rol = null;
+        if (modalidad != null && modalidad.trim().isEmpty())
+            modalidad = null;
 
         // .getContent() extrae la lista de la página
         return empleadoRepository.buscarAvanzado(keyword, rol, modalidad, sucursalId, pageable).getContent();
@@ -105,7 +114,12 @@ public class EmpleadoService {
             e.getPermisos().addAll(todos);
         } else if ("PERSONALIZADO".equals(e.getRol())) {
             if (permisosSeleccionados != null && !permisosSeleccionados.isEmpty()) {
-                List<Permiso> permisosEncontrados = permisoRepository.findByNombreIn(permisosSeleccionados);
+                List<String> permisosLimpios = new ArrayList<>();
+                for (String p : permisosSeleccionados) {
+                    if (p != null)
+                        permisosLimpios.add(p.trim());
+                }
+                List<Permiso> permisosEncontrados = permisoRepository.findByNombreIn(permisosLimpios);
                 e.getPermisos().addAll(permisosEncontrados);
             }
         }
@@ -120,7 +134,7 @@ public class EmpleadoService {
             existing.setEstado(0);
             empleadoRepository.save(existing);
             return 1;
-        }).orElse(0); 
+        }).orElse(0);
     }
 
     public int actualizarPassword(int id, String newPassword) {

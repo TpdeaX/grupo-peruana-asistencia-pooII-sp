@@ -8,6 +8,7 @@ import org.springframework.ui.Model;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import jakarta.servlet.http.HttpSession;
 
 @Controller
 @RequestMapping("/feriados")
@@ -16,23 +17,52 @@ public class FeriadoController {
     @Autowired
     private FeriadoService feriadoService;
 
+    private boolean checkSession(HttpSession session) {
+        return session.getAttribute("usuario") != null;
+    }
+
+    @PostMapping("/filter")
+    public String filtrar(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String keyword,
+            HttpSession session) {
+
+        session.setAttribute("fer_page", page);
+        session.setAttribute("fer_size", size);
+        session.setAttribute("fer_keyword", keyword);
+        return "redirect:/feriados";
+    }
+
     @GetMapping
     public String listar(Model model,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "") String keyword) {
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String keywordParam,
+            HttpSession session) {
 
-        if (size < 1)
-            size = 10;
-        if (size > 100)
-            size = 100;
+        if (!checkSession(session))
+            return "redirect:/index.jsp";
 
-        Page<Feriado> pageRes = feriadoService.listar(keyword, page, size);
+        Integer sessionPage = (Integer) session.getAttribute("fer_page");
+        int p = (sessionPage != null) ? sessionPage : 0;
+
+        Integer sessionSize = (Integer) session.getAttribute("fer_size");
+        int s = (sessionSize != null) ? sessionSize : 10;
+        if (s < 1)
+            s = 10;
+        if (s > 100)
+            s = 100;
+
+        String k = (String) session.getAttribute("fer_keyword");
+        if (k == null)
+            k = "";
+
+        Page<Feriado> pageRes = feriadoService.listar(k, p, s);
 
         model.addAttribute("feriados", pageRes.getContent());
         model.addAttribute("pagina", pageRes);
-        model.addAttribute("keyword", keyword);
-        model.addAttribute("size", size);
+        model.addAttribute("keyword", k);
+        model.addAttribute("size", s);
         return "views/feriados/lista";
     }
 

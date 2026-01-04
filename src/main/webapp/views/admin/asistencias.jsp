@@ -56,6 +56,12 @@
         .badge-qr { background-color: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
         .badge-gps { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
         .badge-manual { background-color: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; }
+        .badge-sospechosa { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; animation: pulse-warning 2s ease-in-out infinite; }
+        
+        @keyframes pulse-warning {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.2); }
+            50% { box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.1); }
+        }
 
         /* Grid View (Cards) */
         .grid-view-container {
@@ -114,6 +120,8 @@
 </head>
 <body>
     <div id="toast-mount-point" style="display:none;"></div>
+    <jsp:include page="../shared/loading-screen.jsp" />
+    <jsp:include page="../shared/console-warning.jsp" />
     <jsp:include page="../shared/sidebar.jsp" />
     <div class="main-content">
         <jsp:include page="../shared/header.jsp" />
@@ -146,7 +154,7 @@
 
             <!-- Filters -->
             <div class="card" style="margin-bottom: 24px; padding: 24px;">
-                <form id="filterForm" action="${pageContext.request.contextPath}/asistencias" method="get">
+                <form id="filterForm" action="${pageContext.request.contextPath}/admin/asistencias/filter" method="post">
                     <input type="hidden" name="page" id="pageInput" value="${pagina.number}">
                     <input type="hidden" name="size" id="sizeInput" value="${size}">
                     
@@ -237,6 +245,12 @@
                                             </span>
                                             ${a.modo}
                                         </span>
+                                        <c:if test="${a.sospechosa == true}">
+                                            <span class="badge badge-sospechosa" style="margin-left: 4px;">
+                                                <span class="material-symbols-outlined" style="font-size: 14px;">warning</span>
+                                                Sospechosa
+                                            </span>
+                                        </c:if>
                                     </td>
                                     <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${a.observacion}">
                                         ${a.observacion}
@@ -293,13 +307,19 @@
                             <span class="card-label">Sucursal:</span>
                             <span class="card-value">${a.empleado.sucursal != null ? a.empleado.sucursal.nombre : '-'}</span>
                         </div>
-                        <div class="card-row" style="margin-top: 8px; align-items: center;">
+                        <div class="card-row" style="margin-top: 8px; align-items: center; flex-wrap: wrap; gap: 4px;">
                              <span class="badge ${a.modo == 'QR_DINAMICO' ? 'badge-qr' : (a.modo == 'GPS' ? 'badge-gps' : 'badge-manual')}">
                                 <span class="material-symbols-outlined" style="font-size: 14px;">
                                     ${a.modo == 'QR_DINAMICO' ? 'qr_code' : (a.modo == 'GPS' ? 'location_on' : 'edit_note')}
                                 </span>
                                 ${a.modo}
                             </span>
+                            <c:if test="${a.sospechosa == true}">
+                                <span class="badge badge-sospechosa">
+                                    <span class="material-symbols-outlined" style="font-size: 14px;">warning</span>
+                                    Sospechosa
+                                </span>
+                            </c:if>
                         </div>
                     </div>
                 </c:forEach>

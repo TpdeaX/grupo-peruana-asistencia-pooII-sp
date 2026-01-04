@@ -69,11 +69,15 @@
 </head>
 <body>
 
-    <jsp:include page="../shared/sidebar.jsp" />
-    <div class="main-content">
-        <jsp:include page="../shared/header.jsp" />
-
-    <div class="page-container">
+    <jsp:include page="../shared/loading-screen.jsp" />
+    
+    <%-- Conditional Layout based on role --%>
+    <c:choose>
+        <c:when test="${sessionScope.usuario.rol == 'ADMIN' || sessionScope.usuario.rol == 'JEFE'}">
+            <jsp:include page="../shared/sidebar.jsp" />
+            <div class="main-content">
+                <jsp:include page="../shared/header.jsp" />
+                <div class="page-container">
         <div class="card">
             <div class="card-header" style="text-align: center;">
                 <h2>${justificacion.id == 0 ? 'Nueva Solicitud' : 'Editar Solicitud'}</h2>
@@ -319,5 +323,182 @@
     </script>
 
     </div>
+    </div><%-- End Page Container --%>
+    </div><%-- End Main Content --%>
+    </c:when>
+    <c:otherwise>
+        <%-- MOBILE LAYOUT --%>
+        <jsp:include page="../shared/mobile-layout.jsp" />
+        
+        <main class="mobile-content">
+            <div class="page-header" style="margin-bottom: 24px;">
+                <a href="${pageContext.request.contextPath}/justificaciones" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); margin-bottom: 8px; font-size: 0.9rem;">
+                    <span class="material-symbols-rounded">arrow_back</span> Volver
+                </a>
+                <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0;">${justificacion.id == 0 ? 'Nueva Solicitud' : 'Editar Solicitud'}</h1>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 4px 0 0 0;">Ingresa los detalles de tu justificación</p>
+            </div>
+
+            <form action="${pageContext.request.contextPath}/justificaciones/guardar" method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 20px;">
+                <input type="hidden" name="id" value="${justificacion.id}">
+
+                <!-- Date Range -->
+                <div style="background: var(--surface); padding: 16px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h3 style="font-size: 1rem; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-rounded" style="color: var(--primary);">date_range</span> Fechas
+                    </h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Desde</label>
+                            <input type="date" name="fechaInicio" id="m_fechaInicio" value="${justificacion.fechaInicio}" required
+                                style="width: 100%; padding: 12px; border: 1px solid var(--outline); border-radius: 12px; font-family: 'Outfit'; font-size: 0.95rem; background: var(--surface-container); color: var(--text-primary);">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Hasta</label>
+                            <input type="date" name="fechaFin" id="m_fechaFin" value="${justificacion.fechaFin}" required
+                                style="width: 100%; padding: 12px; border: 1px solid var(--outline); border-radius: 12px; font-family: 'Outfit'; font-size: 0.95rem; background: var(--surface-container); color: var(--text-primary);">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Type Selector -->
+                <div style="background: var(--surface); padding: 16px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h3 style="font-size: 1rem; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-rounded" style="color: var(--primary);">tune</span> Modalidad
+                    </h3>
+                    
+                    <div class="mobile-radio-group" style="display: flex; flex-direction: column; gap: 8px;">
+                        <label class="mobile-radio-card" onclick="mobileSelectMode('DIARIA')">
+                            <input type="radio" name="modeSelectorMobile" value="DIARIA" checked style="display: none;">
+                            <div class="radio-content" style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--outline); border-radius: 12px; transition: all 0.2s;">
+                                <span class="material-symbols-rounded" style="color: var(--text-secondary);">calendar_view_day</span>
+                                <span style="font-weight: 500; color: var(--text-primary);">Días Completos</span>
+                                <span class="material-symbols-rounded check-icon" style="margin-left: auto; color: var(--primary); opacity: 0; transform: scale(0.5); transition: all 0.2s;">check_circle</span>
+                            </div>
+                        </label>
+                        <label class="mobile-radio-card" onclick="mobileSelectMode('HORAS_FIJAS')">
+                            <input type="radio" name="modeSelectorMobile" value="HORAS_FIJAS" style="display: none;">
+                            <div class="radio-content" style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--outline); border-radius: 12px; transition: all 0.2s;">
+                                <span class="material-symbols-rounded" style="color: var(--text-secondary);">schedule</span>
+                                <span style="font-weight: 500; color: var(--text-primary);">Horas (Fijo)</span>
+                                <span class="material-symbols-rounded check-icon" style="margin-left: auto; color: var(--primary); opacity: 0; transform: scale(0.5); transition: all 0.2s;">check_circle</span>
+                            </div>
+                        </label>
+                        <%-- Removed Custom Hours for Mobile for simplicity or could be added later if critical --%>
+                    </div>
+
+                    <!-- Hidden fields to sync with backend expectations -->
+                    <input type="checkbox" id="m_esPorHoras" name="esPorHoras" style="display: none;">
+                    
+                    <!-- Fixed Hours Container -->
+                    <div id="m_horasContainer" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--outline);">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Hora Inicio</label>
+                                <input type="time" name="horaInicio" id="m_horaInicio" value="${justificacion.horaInicio}"
+                                    style="width: 100%; padding: 12px; border: 1px solid var(--outline); border-radius: 12px; font-family: 'Outfit'; font-size: 0.95rem; background: var(--surface-container); color: var(--text-primary);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Hora Fin</label>
+                                <input type="time" name="horaFin" id="m_horaFin" value="${justificacion.horaFin}"
+                                    style="width: 100%; padding: 12px; border: 1px solid var(--outline); border-radius: 12px; font-family: 'Outfit'; font-size: 0.95rem; background: var(--surface-container); color: var(--text-primary);">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Motivo -->
+                <div style="background: var(--surface); padding: 16px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h3 style="font-size: 1rem; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-rounded" style="color: var(--primary);">description</span> Motivo
+                    </h3>
+                    <textarea name="motivo" required placeholder="Describe la razón de tu solicitud..."
+                        style="width: 100%; height: 100px; padding: 12px; border: 1px solid var(--outline); border-radius: 12px; font-family: 'Outfit'; font-size: 0.95rem; background: var(--surface-container); color: var(--text-primary); resize: none;">${justificacion.motivo}</textarea>
+                </div>
+
+                <!-- Evidence Upload Mobile -->
+                <div style="background: var(--surface); padding: 16px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <h3 style="font-size: 1rem; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-rounded" style="color: var(--primary);">upload_file</span> Evidencia
+                    </h3>
+                    <label style="display: block; border: 2px dashed var(--outline); border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s;" id="m_dropzone">
+                        <input type="file" name="evidencia" style="display: none;" onchange="mobileUpdateFile(this)" ${justificacion.id == 0 ? 'required' : ''}>
+                        <span class="material-symbols-rounded" style="font-size: 32px; color: var(--primary); margin-bottom: 8px;">add_photo_alternate</span>
+                        <div style="font-weight: 500; font-size: 0.9rem; color: var(--text-primary);" id="m_fileName">Toca para subir archivo</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">JPG, PNG, PDF</div>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" style="background: linear-gradient(135deg, var(--primary) 0%, #C7396D 100%); color: white; border: none; padding: 16px; border-radius: 30px; font-family: 'Outfit'; font-weight: 600; font-size: 1rem; box-shadow: 0 8px 24px rgba(236, 64, 122, 0.3); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>Enviar Solicitud</span>
+                    <span class="material-symbols-rounded">send</span>
+                </button>
+                <div style="height: 40px;"></div>
+            </form>
+        </main>
+
+        <script>
+            function mobileSelectMode(mode) {
+                // Update UI
+                document.querySelectorAll('.mobile-radio-card .radio-content').forEach(el => {
+                    el.style.borderColor = 'var(--outline)';
+                    el.style.backgroundColor = 'transparent';
+                    el.querySelector('.check-icon').style.opacity = '0';
+                    el.querySelector('span:nth-child(2)').style.color = 'var(--text-primary)';
+                });
+
+                const selectedFn = document.querySelector('input[name="modeSelectorMobile"][value="' + mode + '"]');
+                if(selectedFn) {
+                    selectedFn.checked = true;
+                    const container = selectedFn.closest('.mobile-radio-card').querySelector('.radio-content');
+                    container.style.borderColor = 'var(--primary)';
+                    container.style.backgroundColor = 'var(--primary-soft)';
+                    container.querySelector('.check-icon').style.opacity = '1';
+                    container.querySelector('span:nth-child(2)').style.color = 'var(--primary)';
+                    container.querySelector('.check-icon').style.transform = 'scale(1)';
+                }
+
+                // Update Logic
+                const esPorHoras = document.getElementById('m_esPorHoras');
+                const horaContainer = document.getElementById('m_horasContainer');
+                const hInicio = document.getElementById('m_horaInicio');
+                const hFin = document.getElementById('m_horaFin');
+
+                if (mode === 'HORAS_FIJAS') {
+                    esPorHoras.checked = true;
+                    horaContainer.style.display = 'block';
+                    hInicio.required = true; hFin.required = true;
+                } else {
+                    esPorHoras.checked = false;
+                    horaContainer.style.display = 'none';
+                    hInicio.required = false; hFin.required = false;
+                }
+            }
+
+            function mobileUpdateFile(input) {
+                if (input.files && input.files[0]) {
+                    document.getElementById('m_fileName').innerText = input.files[0].name;
+                    document.getElementById('m_dropzone').style.borderColor = 'var(--success)';
+                    document.getElementById('m_dropzone').style.backgroundColor = 'var(--success-soft)';
+                    document.getElementById('m_dropzone').querySelector('.material-symbols-rounded').innerText = 'check_circle';
+                    document.getElementById('m_dropzone').querySelector('.material-symbols-rounded').style.color = 'var(--success)';
+                }
+            }
+
+            // Init
+            (function() {
+                // Default mode
+                mobileSelectMode('DIARIA');
+                
+                // Date sync
+                document.getElementById('m_fechaInicio').addEventListener('change', function() {
+                    const fin = document.getElementById('m_fechaFin');
+                    if (!fin.value) fin.value = this.value;
+                });
+            })();
+        </script>
+    </c:otherwise>
+</c:choose>
 </body>
 </html>

@@ -170,7 +170,7 @@
                                     <div class="col-md-6 mb-2">
                                         <div class="form-check custom-checkbox p-2 border rounded bg-white">
                                             <input class="form-check-input ms-1" type="checkbox"
-                                                name="permisos" 
+                                                name="permisosSeleccionados" 
                                                 value="${p.nombre}"
                                                 id="permiso_${p.id}" 
                                                 ${permisosActuales != null && permisosActuales.contains(p.nombre) ? 'checked' : ''}>
@@ -194,7 +194,7 @@
                 </c:if>
 
                 <div class="buttons">
-                    <md-text-button type="button" onclick="window.location.href='${pageContext.request.contextPath}/empleados?accion=listar'">Cancelar</md-text-button>
+                    <md-text-button type="button" onclick="window.location.href='${pageContext.request.contextPath}/empleados'">Cancelar</md-text-button>
                     <md-filled-button type="submit">Guardar Datos</md-filled-button>
                 </div>
             </form>

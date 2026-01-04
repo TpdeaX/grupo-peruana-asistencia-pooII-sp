@@ -136,8 +136,13 @@ body {
     color: var(--md-sys-color-on-background);
     margin: 0;
     line-height: 1.5;
-    transition: background-color 0.3s, color 0.3s;
     -webkit-font-smoothing: antialiased;
+}
+
+/* Only animate theme changes when manually triggered */
+body.theme-transition,
+body.theme-transition * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
 }
 
 /* --- Layout Utilities --- */
@@ -173,7 +178,7 @@ h3 { font-size: 1.5rem; line-height: 2rem; }
     box-shadow: var(--md-sys-elevation-1);
     border: 1px solid var(--md-sys-color-outline-variant); /* Border for definition */
     overflow: hidden;
-    transition: box-shadow var(--md-sys-motion-duration-short), background-color 0.3s;
+    transition: box-shadow var(--md-sys-motion-duration-short);
 }
 .card:hover {
     box-shadow: var(--md-sys-elevation-2);
@@ -447,6 +452,15 @@ md-dialog {
     background: linear-gradient(to bottom, var(--md-sys-color-surface-container-high) 0%, var(--md-sys-color-surface) 120px) !important; 
     /* Entrance Animation */
     animation: dialog-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    
+    /* FIX: Ensure space for top icon */
+    margin-top: 80px !important;
+}
+
+/* FIX: Attempting to style the standard dialog backdrop if exposed, or fallback */
+md-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
 }
 
 @keyframes dialog-pop {
@@ -461,7 +475,7 @@ md-dialog > md-icon[slot="icon"] {
     height: 64px;
     /* Absolutely position to break out of flow reliably */
     position: absolute;
-    top: -60px; /* Moved higher as requested */
+    top: -32px; /* FIX: Less negative to avoid screen edge clipping if margins are tight */
     left: 50%;
     transform: translateX(-50%);
     

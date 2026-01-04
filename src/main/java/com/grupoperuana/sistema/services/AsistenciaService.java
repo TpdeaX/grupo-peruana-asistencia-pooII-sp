@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
 
@@ -35,6 +36,7 @@ public class AsistenciaService {
     private final AsistenciaRepository asistenciaRepository;
     private final EmpleadoRepository empleadoRepository;
     private final HorarioRepository horarioRepository;
+    private final ConfiguracionService configuracionService;
 
     @org.springframework.beans.factory.annotation.Value("${app.asistencia.factor-descuento:1.0}")
     private double factorDescuento;
@@ -43,15 +45,196 @@ public class AsistenciaService {
     private double factorBonificacion;
 
     public AsistenciaService(AsistenciaRepository asistenciaRepository, EmpleadoRepository empleadoRepository,
-            HorarioRepository horarioRepository) {
+            HorarioRepository horarioRepository, ConfiguracionService configuracionService) {
         this.asistenciaRepository = asistenciaRepository;
         this.empleadoRepository = empleadoRepository;
         this.horarioRepository = horarioRepository;
+        this.configuracionService = configuracionService;
+    }
+
+    /**
+     * Obtiene la tolerancia en minutos desde la configuración del sistema.
+     * 
+     * @return Minutos de tolerancia (default: 15)
+     */
+    private int getToleranciaMinutos() {
+        String valor = configuracionService.getValor("asistencia_tolerancia");
+        try {
+            return valor != null ? Integer.parseInt(valor) : 15;
+        } catch (NumberFormatException e) {
+            return 15;
+        }
+    }
+
+    /**
+     * Verifica si los descuentos por falta están habilitados.
+     */
+    public boolean isDescuentoFaltaEnabled() {
+        String valor = configuracionService.getValor("descuento_falta_enabled");
+        return "true".equalsIgnoreCase(valor);
+    }
+
+    /**
+     * Verifica si los descuentos por tardanza están habilitados.
+     */
+    public boolean isDescuentoTardanzaEnabled() {
+        String valor = configuracionService.getValor("descuento_tardanza_enabled");
+        return "true".equalsIgnoreCase(valor);
+    }
+
+    /**
+     * Verifica si las horas extras están permitidas.
+     */
+    public boolean isHorasExtrasEnabled() {
+        String valor = configuracionService.getValor("asistencia_permitir_extras");
+        return "true".equalsIgnoreCase(valor);
     }
 
     // --- MÉTODO NUEVO: PUENTE PARA EL CONTROLLER ---
     public boolean verificarSiMarcoHoy(int empleadoId) {
         return asistenciaRepository.existsByEmpleadoIdAndFecha(empleadoId, LocalDate.now());
+    }
+
+    public long contarAsistenciasFecha(LocalDate fecha) {
+        return asistenciaRepository.countByFecha(fecha);
+    }
+
+    public long contarTardanzasFecha(LocalDate fecha) {
+        return asistenciaRepository.countByFechaAndMinutosTardanzaGreaterThan(fecha, 0L);
+    }
+
+    public List<Long> obtenerAsistenciasUltimos5Dias() {
+        List<Long> counts = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        // Lunes a Viernes de la semana actual o ultimos 5 dias habiles?
+        // El requisito dice "Tendencia de Asistencia" line chart.
+        // Vamos a devolver los ultimos 5 dias incluyendo hoy.
+        // O mejor, los 5 dias de la semana laboral (L-V).
+        // Por simplicidad, ultimos 5 dias naturales hacia atras.
+
+        // Vamos a hacerlo fijo Lunes, Mar, Mie, Jue, Vie de esta semana.
+        LocalDate startOfWeek = today
+                .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+
+        for (int i = 0; i < 5; i++) {
+            LocalDate d = startOfWeek.plusDays(i);
+            // Si el dia es futuro, 0
+            if (d.isAfter(today)) {
+                counts.add(0L);
+            } else {
+                counts.add(asistenciaRepository.countByFecha(d));
+            }
+        }
+        return counts;
+    }
+
+    // === DASHBOARD STATISTICS METHODS ===
+
+    public List<Asistencia> listarAsistenciasFecha(LocalDate fecha) {
+        return asistenciaRepository.findByFecha(fecha);
+    }
+
+    public List<Asistencia> listarTardanzasFecha(LocalDate fecha) {
+        return asistenciaRepository.findByFechaAndMinutosTardanzaGreaterThan(fecha, 0L);
+    }
+
+    public java.util.Map<String, Long> obtenerDistribucionModos(LocalDate fecha) {
+        java.util.Map<String, Long> result = new java.util.HashMap<>();
+        List<Object[]> rows = asistenciaRepository.countByFechaGroupByModo(fecha);
+        for (Object[] row : rows) {
+            String modo = (String) row[0];
+            Long count = (Long) row[1];
+            result.put(modo != null ? modo : "OTRO", count);
+        }
+        return result;
+    }
+
+    public List<Long> obtenerAsistenciasUltimos7Dias() {
+        List<Long> counts = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (int i = 6; i >= 0; i--) {
+            LocalDate d = today.minusDays(i);
+            counts.add(asistenciaRepository.countByFecha(d));
+        }
+        return counts;
+    }
+
+    public List<Long> obtenerTardanzasUltimos7Dias() {
+        List<Long> counts = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (int i = 6; i >= 0; i--) {
+            LocalDate d = today.minusDays(i);
+            counts.add(asistenciaRepository.countByFechaAndMinutosTardanzaGreaterThan(d, 0L));
+        }
+        return counts;
+    }
+
+    public List<String> obtenerLabelsUltimos7Dias() {
+        List<String> labels = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("EEE",
+                new java.util.Locale("es", "ES"));
+        for (int i = 6; i >= 0; i--) {
+            LocalDate d = today.minusDays(i);
+            String label = d.format(formatter);
+            // Capitalize first letter
+            labels.add(label.substring(0, 1).toUpperCase() + label.substring(1));
+        }
+        return labels;
+    }
+
+    public com.grupoperuana.sistema.dto.EmpleadoRankingDTO obtenerMejorEmpleadoRango(LocalDate inicio, LocalDate fin) {
+        List<Object[]> rows = asistenciaRepository.findTopEmpleadosPuntualesByFechaBetween(
+                inicio, fin, org.springframework.data.domain.PageRequest.of(0, 1));
+
+        if (rows.isEmpty())
+            return null;
+
+        Object[] row = rows.get(0);
+        Integer empId = (Integer) row[0];
+        Long count = (Long) row[1];
+
+        return empleadoRepository.findById(empId).map(emp -> {
+            com.grupoperuana.sistema.dto.EmpleadoRankingDTO dto = new com.grupoperuana.sistema.dto.EmpleadoRankingDTO();
+            dto.setId(emp.getId());
+            dto.setNombres(emp.getNombres());
+            dto.setApellidos(emp.getApellidos());
+            dto.setDni(emp.getDni());
+            dto.setTotalAsistencias(count.intValue());
+            dto.setPromedioPuntualidad(100.0); // Puntual = 100%
+            return dto;
+        }).orElse(null);
+    }
+
+    public double calcularTasaPuntualidad(LocalDate fecha) {
+        long total = asistenciaRepository.countByFecha(fecha);
+        if (total == 0)
+            return 0.0;
+        long tardanzas = asistenciaRepository.countByFechaAndMinutosTardanzaGreaterThan(fecha, 0L);
+        return Math.round((double) (total - tardanzas) / total * 1000.0) / 10.0; // Round to 1 decimal
+    }
+
+    public List<com.grupoperuana.sistema.dto.AsistenciaDetalleDTO> convertirAsistenciasADetalle(
+            List<Asistencia> asistencias) {
+        List<com.grupoperuana.sistema.dto.AsistenciaDetalleDTO> result = new ArrayList<>();
+        for (Asistencia a : asistencias) {
+            com.grupoperuana.sistema.dto.AsistenciaDetalleDTO dto = new com.grupoperuana.sistema.dto.AsistenciaDetalleDTO();
+            dto.setId(a.getId());
+            dto.setEmpleadoId(a.getEmpleado().getId());
+            dto.setEmpleadoNombre(a.getEmpleado().getNombres());
+            dto.setEmpleadoApellido(a.getEmpleado().getApellidos());
+            dto.setEmpleadoDni(a.getEmpleado().getDni());
+            dto.setFecha(a.getFecha().toString());
+            dto.setHoraEntrada(a.getHoraEntrada() != null ? a.getHoraEntrada().toString() : "");
+            dto.setHoraSalida(a.getHoraSalida() != null ? a.getHoraSalida().toString() : "");
+            dto.setModo(a.getModo());
+            dto.setMinutosTardanza(a.getMinutosTardanza() != null ? a.getMinutosTardanza() : 0);
+            if (a.getEmpleado().getSucursal() != null) {
+                dto.setSucursalNombre(a.getEmpleado().getSucursal().getNombre());
+            }
+            result.add(dto);
+        }
+        return result;
     }
 
     public List<Asistencia> listarTodo() {
@@ -64,7 +247,21 @@ public class AsistenciaService {
 
     public Page<Asistencia> listarAsistenciasPaginado(Pageable pageable, String keyword, Integer sucursalId,
             LocalDate fechaInicio, LocalDate fechaFin) {
-        Specification<Asistencia> spec = (root, query, cb) -> {
+        Specification<Asistencia> spec = crearEspecificacionFiltros(keyword, sucursalId, fechaInicio, fechaFin);
+        return asistenciaRepository.findAll(spec, pageable);
+    }
+
+    public List<Asistencia> listarAsistenciasFiltradas(String keyword, Integer sucursalId, LocalDate fechaInicio,
+            LocalDate fechaFin) {
+        Specification<Asistencia> spec = crearEspecificacionFiltros(keyword, sucursalId, fechaInicio, fechaFin);
+        // Ensure default sort matches the paginated one: Fecha Desc, HoraEntrada Desc
+        Sort sort = Sort.by("fecha").descending().and(Sort.by("horaEntrada").descending());
+        return asistenciaRepository.findAll(spec, sort);
+    }
+
+    private Specification<Asistencia> crearEspecificacionFiltros(String keyword, Integer sucursalId,
+            LocalDate fechaInicio, LocalDate fechaFin) {
+        return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             if (sucursalId != null) {
@@ -89,11 +286,10 @@ public class AsistenciaService {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-        return asistenciaRepository.findAll(spec, pageable);
     }
 
     public String marcarAsistencia(int idEmpleado, String modo, double lat, double lon, String observacion,
-            MultipartFile foto) {
+            MultipartFile foto, boolean sospechosa) {
         System.out.println("DEBUG_ASISTENCIA: --- INICIO MARCA ---");
         System.out.println("DEBUG_ASISTENCIA: Empleado ID: " + idEmpleado);
         System.out.println("DEBUG_ASISTENCIA: Hora Servidor: " + java.time.LocalDateTime.now());
@@ -171,8 +367,17 @@ public class AsistenciaService {
 
                 double costoMinuto = sueldo / 30.0 / 8.0 / 60.0;
 
-                double descuento = minutosTardanza * costoMinuto * factorDescuento;
-                double bonificacion = minutosExtras * costoMinuto * factorBonificacion;
+                // Aplicar descuento solo si está habilitado en configuración
+                double descuento = 0.0;
+                if (isDescuentoTardanzaEnabled()) {
+                    descuento = minutosTardanza * costoMinuto * factorDescuento;
+                }
+
+                // Aplicar bonificación solo si horas extras están permitidas
+                double bonificacion = 0.0;
+                if (isHorasExtrasEnabled()) {
+                    bonificacion = minutosExtras * costoMinuto * factorBonificacion;
+                }
 
                 // Redondear a 2 decimales
                 a.setDineroDescuento(Math.round(descuento * 100.0) / 100.0);
@@ -221,29 +426,63 @@ public class AsistenciaService {
                         + " Diff: " + minDiff + "min");
             }
 
-            if (horarioObjetivo == null) {
-                System.out.println("DEBUG_ASISTENCIA: SIN_TURNO (No se enconto horario valido para marcar).");
-                return "SIN_TURNO"; // No hay mas turnos disponibles o válidos
-            }
-
-            // Crear la asistencia
-            Asistencia a = new Asistencia();
+            // --- NUEVA LÓGICA: PERMITIR SIEMPRE MARCAR CON ADVERTENCIAS ---
             Empleado e = empleadoRepository.findById(idEmpleado).orElse(null);
             if (e == null)
                 return "ERROR";
 
+            String codigoRetorno = sospechosa ? "ENTRADA_SOSPECHOSA" : "ENTRADA";
+            String obsBase = observacion != null ? observacion : "Entrada Regular";
+
+            if (horarioObjetivo == null) {
+                System.out.println("DEBUG_ASISTENCIA: No hay turno PENDIENTE válido.");
+
+                // Verificar tipo de modalidad del empleado
+                boolean esLibre = "LIBRE".equalsIgnoreCase(e.getTipoModalidad());
+
+                // Obtener todos los turnos de hoy para diagnóstico
+                List<Horario> turnosHoy = horarioRepository.findByEmpleadoIdAndFecha(idEmpleado, hoy);
+
+                if (esLibre) {
+                    // Empleado LIBRE: puede marcar sin restricciones
+                    System.out.println("DEBUG_ASISTENCIA: Empleado LIBRE - permitiendo marca sin horario.");
+                    codigoRetorno = "ENTRADA_LIBRE";
+                    obsBase = "Entrada (Empleado Libre)";
+                } else if (turnosHoy.isEmpty()) {
+                    // Sin turnos programados para hoy
+                    System.out.println("DEBUG_ASISTENCIA: SIN TURNOS HOY - permitiendo con advertencia.");
+                    codigoRetorno = "SIN_TURNO_ADVERTENCIA";
+                    obsBase = "⚠️ Entrada sin turno programado";
+                } else {
+                    // Tiene turnos pero todos ya pasaron (FALTA)
+                    System.out.println("DEBUG_ASISTENCIA: TURNOS PASADOS - permitiendo con advertencia.");
+                    codigoRetorno = "TURNOS_PASADOS";
+                    obsBase = "⚠️ Entrada tardía (turnos vencidos)";
+                }
+            }
+
+            // Crear la asistencia
+            Asistencia a = new Asistencia();
             a.setEmpleado(e);
             a.setFecha(hoy);
             a.setHoraEntrada(ahora);
             a.setModo(modo);
             a.setLatitud(lat);
             a.setLongitud(lon);
-            a.setObservacion(observacion != null ? observacion : "Entrada Regular");
+
+            // Handle suspicious attendance
+            if (sospechosa) {
+                a.setSospechosa(true);
+                a.setObservacion("⚠️ SOSPECHOSA - " + obsBase);
+            } else {
+                a.setObservacion(obsBase);
+            }
             if (foto != null)
                 a.setFotoUrl(guardarFoto(foto));
             asistenciaRepository.save(a);
-            System.out.println("DEBUG_ASISTENCIA: Nueva asistencia (ENTRADA) guardada.");
-            return "ENTRADA";
+            System.out.println(
+                    "DEBUG_ASISTENCIA: Nueva asistencia (" + codigoRetorno + ") guardada.");
+            return codigoRetorno;
         }
     }
 
@@ -337,16 +576,17 @@ public class AsistenciaService {
             if (asistenciaEncontrada != null) {
                 long diffMinutos = Duration.between(h.getHoraInicio(), asistenciaEncontrada.getHoraEntrada())
                         .toMinutes();
+                int tolerancia = getToleranciaMinutos();
 
                 if ("JUSTIFICACION".equals(asistenciaEncontrada.getModo())) {
                     estado = "JUSTIFICADA";
                     mensaje = "Falta Justificada";
                     css = "status-ontime";
-                } else if (diffMinutos < -2) {
+                } else if (diffMinutos < -tolerancia) {
                     estado = "ASISTIDO";
                     mensaje = "Ingreso Temprano";
                     css = "status-early";
-                } else if (diffMinutos >= -2 && diffMinutos <= 2) {
+                } else if (diffMinutos >= -tolerancia && diffMinutos <= tolerancia) {
                     estado = "ASISTIDO";
                     mensaje = "Puntual";
                     css = "status-ontime";
@@ -356,7 +596,8 @@ public class AsistenciaService {
                     css = "status-late";
                 }
             } else {
-                if (LocalTime.now().isAfter(h.getHoraInicio().plusMinutes(2))) {
+                int tolerancia = getToleranciaMinutos();
+                if (LocalTime.now().isAfter(h.getHoraInicio().plusMinutes(tolerancia))) {
                     if (LocalTime.now().isAfter(h.getHoraFin())) {
                         estado = "FALTA";
                         mensaje = "No Marcado";

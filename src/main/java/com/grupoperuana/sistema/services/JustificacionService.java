@@ -18,10 +18,14 @@ public class JustificacionService {
 
     private final JustificacionRepository justificacionRepository;
     private final AsistenciaService asistenciaService;
+    private final NotificacionGeneratorService notificacionGenerator;
 
-    public JustificacionService(JustificacionRepository justificacionRepository, AsistenciaService asistenciaService) {
+    public JustificacionService(JustificacionRepository justificacionRepository,
+            AsistenciaService asistenciaService,
+            NotificacionGeneratorService notificacionGenerator) {
         this.justificacionRepository = justificacionRepository;
         this.asistenciaService = asistenciaService;
+        this.notificacionGenerator = notificacionGenerator;
     }
 
     public List<Justificacion> listarTodo() {
@@ -90,7 +94,14 @@ public class JustificacionService {
                 detalle.setJustificacion(justificacion);
             }
         }
+
+        boolean isNew = justificacion.getId() == 0;
         justificacionRepository.save(justificacion);
+
+        // Notify admins about new pending justification
+        if (isNew && "PENDIENTE".equals(justificacion.getEstado())) {
+            notificacionGenerator.notificarJustificacionPendiente(justificacion);
+        }
     }
 
     public void eliminar(int id) {
@@ -125,6 +136,9 @@ public class JustificacionService {
             j.setComentarioAprobacion(comentario);
             justificacionRepository.save(j);
             asistenciaService.aplicarJustificacion(j);
+
+            // Notify employee that justification was approved
+            notificacionGenerator.notificarJustificacionAprobada(j);
             return true;
         }
         return false;
@@ -137,8 +151,23 @@ public class JustificacionService {
             j.setEstado("RECHAZADA");
             j.setComentarioAprobacion(comentario);
             justificacionRepository.save(j);
+
+            // Notify employee that justification was rejected
+            notificacionGenerator.notificarJustificacionRechazada(j, comentario);
             return true;
         }
         return false;
+    }
+
+    public long contarPendientes() {
+        return justificacionRepository.countByEstado("PENDIENTE");
+    }
+
+    public List<Long> obtenerEstadisticasSolicitudes() {
+        // [Pendiente, Aprobado, Rechazado]
+        long pendientes = justificacionRepository.countByEstado("PENDIENTE");
+        long aprobadas = justificacionRepository.countByEstado("ACEPTADA");
+        long rechazadas = justificacionRepository.countByEstado("RECHAZADA");
+        return List.of(pendientes, aprobadas, rechazadas);
     }
 }

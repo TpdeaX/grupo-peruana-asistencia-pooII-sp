@@ -24,7 +24,6 @@ public class Empleado implements Serializable {
 
     @Column(nullable = false, length = 15, unique = true)
     private String dni;
-    
 
     @Column(nullable = false)
     private String password;
@@ -47,15 +46,10 @@ public class Empleado implements Serializable {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Timestamp createdAt;
-    
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "empleado_permiso",
-        joinColumns = @JoinColumn(name = "empleado_id"),
-        inverseJoinColumns = @JoinColumn(name = "permiso_id")
-    )
-    private Set<Permiso> permisos = new HashSet<>();
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "empleado_permiso", joinColumns = @JoinColumn(name = "empleado_id"), inverseJoinColumns = @JoinColumn(name = "permiso_id"))
+    private Set<Permiso> permisos = new HashSet<>();
 
     public Empleado() {
     }
@@ -69,14 +63,14 @@ public class Empleado implements Serializable {
     }
 
     public Set<Permiso> getPermisos() {
-		return permisos;
-	}
+        return permisos;
+    }
 
-	public void setPermisos(Set<Permiso> permisos) {
-		this.permisos = permisos;
-	}
+    public void setPermisos(Set<Permiso> permisos) {
+        this.permisos = permisos;
+    }
 
-	public int getId() {
+    public int getId() {
         return id;
     }
 
@@ -166,5 +160,12 @@ public class Empleado implements Serializable {
 
     public String getNombreCompleto() {
         return nombres + " " + apellidos;
+    }
+
+    public String getPermisosString() {
+        if (permisos == null || permisos.isEmpty()) {
+            return "";
+        }
+        return permisos.stream().map(Permiso::getNombre).collect(java.util.stream.Collectors.joining(","));
     }
 }

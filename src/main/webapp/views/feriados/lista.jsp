@@ -98,6 +98,8 @@
 </head>
 <body>
 
+    <jsp:include page="../shared/loading-screen.jsp" />
+    <jsp:include page="../shared/console-warning.jsp" />
     <jsp:include page="../shared/sidebar.jsp" />
 
     <div class="main-content">
@@ -120,7 +122,7 @@
 
             <!-- Filter and Search -->
             <div class="card" style="margin-bottom: 24px; padding: 24px; background-color: var(--md-sys-color-surface); animation: fade-in-down 0.5s ease-out;">
-                <form id="filterForm" action="${pageContext.request.contextPath}/feriados" method="get">
+                <form id="filterForm" action="${pageContext.request.contextPath}/feriados/filter" method="post">
                     <input type="hidden" name="page" id="pageInput" value="${pagina.number}">
                     <input type="hidden" name="size" id="sizeInput" value="${size}">
                     

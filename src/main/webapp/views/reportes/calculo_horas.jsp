@@ -104,6 +104,8 @@
     </style>
 </head>
 <body>
+    <jsp:include page="../shared/loading-screen.jsp" />
+    <jsp:include page="../shared/console-warning.jsp" />
     <jsp:include page="../shared/sidebar.jsp" />
     <div class="main-content">
         <jsp:include page="../shared/header.jsp" />
@@ -140,7 +142,7 @@
 
             <!-- Filters Card -->
             <div class="card" style="margin-bottom: 24px; padding: 24px;">
-                <form id="filterForm" action="${pageContext.request.contextPath}/reportes/calculo" method="get">
+                <form id="filterForm" action="${pageContext.request.contextPath}/reportes/calculo" method="post">
                     <input type="hidden" name="page" id="pageInput" value="${pagina != null ? pagina.number : 0}">
                     <input type="hidden" name="size" id="sizeInput" value="${size}">
                     <!-- Hidden sort input, manipulated by JS -->

@@ -37,7 +37,7 @@
     boolean isConfiguracionOpen = isTipoTurno || isFeriados || isParametrosGenerales;
     
     // Dashboard
-    boolean isDashboard = currentPath.equals("/admin") || currentPath.endsWith("/dashboard.jsp") || currentPath.endsWith("/admin/");
+    boolean isDashboard = currentPath.equals("/admin") || currentPath.endsWith("/dashboard.jsp") || currentPath.endsWith("/admin/") || currentPath.contains("/dashboard");
 %>
 
 
@@ -460,7 +460,7 @@
     </div>
 
     <div class="sidebar-menu">
-        <a href="${pageContext.request.contextPath}/admin" class="nav-item <%= isDashboard ? "active" : "" %>">
+        <a href="${pageContext.request.contextPath}/dashboard" class="nav-item <%= isDashboard ? "active" : "" %>">
             <div class="nav-content">
                 <span class="material-symbols-outlined">dashboard</span>
                 <span class="nav-label">Dashboard</span>
@@ -568,10 +568,6 @@
                     <span class="material-symbols-outlined" style="font-size: 20px;">tune</span>
                     <span class="nav-label">Parámetros Generales</span>
                 </a>
-                 <a href="#" class="nav-item">
-                    <span class="material-symbols-outlined" style="font-size: 20px;">lock</span>
-                    <span class="nav-label">Seguridad</span>
-                </a>
             </div>
         </div>
         
@@ -617,7 +613,6 @@
                  showToast(message, type);
              }
         } else {
-            console.log('Toast:', message);
         }
     }
 
@@ -869,8 +864,6 @@
             const a = getVal('session-user-apellidos');
             const rol = getVal('session-user-rol');
 
-            console.log("SessionDebug: Attempting to save.", {dni, n, a, rol});
-
             // Initials
             var i1 = (n && n.length > 0) ? n.charAt(0) : 'U';
             var i2 = (a && a.length > 0) ? a.charAt(0) : '';
@@ -917,7 +910,6 @@
             if (sessions.length > 5) sessions.pop();
             
             localStorage.setItem('saved_sessions', JSON.stringify(sessions));
-            console.log("SessionDebug: Saved successfully.", user);
             
             // VISIBLE DEBUG (Remove after fix)
             /*

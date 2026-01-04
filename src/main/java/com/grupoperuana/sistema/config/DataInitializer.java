@@ -1,7 +1,9 @@
 package com.grupoperuana.sistema.config;
 
 import com.grupoperuana.sistema.beans.Feriado;
+import com.grupoperuana.sistema.beans.Permiso;
 import com.grupoperuana.sistema.repositories.FeriadoRepository;
+import com.grupoperuana.sistema.repositories.PermisoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -16,9 +18,13 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private FeriadoRepository feriadoRepository;
 
+    @Autowired
+    private PermisoRepository permisoRepository;
+
     @Override
     public void run(String... args) throws Exception {
         initializeFeriados();
+        initializePermisos();
     }
 
     private void initializeFeriados() {
@@ -29,6 +35,26 @@ public class DataInitializer implements CommandLineRunner {
         for (int year = startYear; year <= endYear; year++) {
             addFixedHolidays(year);
             addMovableHolidays(year);
+        }
+    }
+
+    private void initializePermisos() {
+        String[] permisos = {
+                "GESTIONAR_EMPLEADOS",
+                "VER_REPORTES",
+                "APROBAR_JUSTIFICACIONES",
+                "CONFIGURACION_SISTEMA",
+                "EDITAR_HORARIOS",
+                "VER_DASHBOARD_TOTAL"
+        };
+
+        for (String nombre : permisos) {
+            if (permisoRepository.findByNombre(nombre).isEmpty()) {
+                Permiso p = new Permiso();
+                p.setNombre(nombre);
+                permisoRepository.save(p);
+                System.out.println("Permiso agregado: " + nombre);
+            }
         }
     }
 

@@ -50,6 +50,9 @@ public class Asistencia {
     @Column(name = "minutos_extras")
     private Long minutosExtras;
 
+    @Column(name = "sospechosa")
+    private Boolean sospechosa = false;
+
     public Asistencia() {
     }
 
@@ -171,5 +174,13 @@ public class Asistencia {
 
     public void setMinutosExtras(Long minutosExtras) {
         this.minutosExtras = minutosExtras;
+    }
+
+    public Boolean getSospechosa() {
+        return sospechosa;
+    }
+
+    public void setSospechosa(Boolean sospechosa) {
+        this.sospechosa = sospechosa;
     }
 }

@@ -216,14 +216,55 @@ body {
     justify-content: center;
     color: white;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* Pseudo-element for smooth background transitions (esp. Gradients) */
+.social-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .social-btn:hover {
-    transform: translateY(-3px) scale(1.1);
-    background: white;
-    color: var(--brand-purple);
+    transform: translateY(-5px);
+    color: white;
+    /* Remove direct background change to rely on pseudo-element */
 }
+
+.social-btn:hover::before {
+    opacity: 1;
+}
+
+/* Define backgrounds on the pseudo-element */
+.social-btn.fb::before { 
+    background-color: rgba(24, 119, 242, 0.85); 
+}
+.social-btn.tt::before { 
+    background-color: rgba(0, 0, 0, 0.85); 
+}
+.social-btn.ig::before { 
+    background: linear-gradient(45deg, rgba(240, 148, 51, 0.85) 0%, rgba(230, 104, 60, 0.85) 25%, rgba(220, 39, 67, 0.85) 50%, rgba(204, 35, 102, 0.85) 75%, rgba(188, 24, 136, 0.85) 100%); 
+}
+.social-btn.wa::before { 
+    background-color: rgba(37, 211, 102, 0.85); 
+}
+.social-btn.em::before { 
+    background-color: rgba(234, 67, 53, 0.85); 
+}
+
+/* Keep shadows on the main element or move to hover */
+.social-btn.fb:hover { box-shadow: 0 10px 20px -5px rgba(24, 119, 242, 0.5); }
+.social-btn.tt:hover { box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.5); }
+.social-btn.ig:hover { box-shadow: 0 10px 20px -5px rgba(220, 39, 67, 0.5); }
+.social-btn.wa:hover { box-shadow: 0 10px 20px -5px rgba(37, 211, 102, 0.5); }
+.social-btn.em:hover { box-shadow: 0 10px 20px -5px rgba(234, 67, 53, 0.5); }
 
 /* --- FORMULARIO --- */
 .form-side {
@@ -540,6 +581,9 @@ md-filled-button {
 </head>
 <body>
 
+	<!-- Loading Screen -->
+	<jsp:include page="views/shared/loading-screen.jsp" />
+
 	<div id="background-effects"></div>
 
 	<div class="main-card">
@@ -707,7 +751,14 @@ md-filled-button {
                         displayName = n + (a ? ' ' + a : '');
                     }
                     
-                    const avatarText = user.avatar || displayName.charAt(0).toUpperCase();
+                    const nInitial = (user.nombres && user.nombres.trim()) ? user.nombres.trim().charAt(0).toUpperCase() : '';
+                    const aInitial = (user.apellidos && user.apellidos.trim()) ? user.apellidos.trim().charAt(0).toUpperCase() : '';
+                    
+                    // Prioritize computed initials over stored 'avatar' which might be stale (single letter)
+                    let avatarText = nInitial + aInitial;
+                    if (!avatarText) {
+                        avatarText = user.avatar || displayName.charAt(0).toUpperCase();
+                    }
 
                     // DOM Creation (Safer and easier to debug)
                     const elAvatar = document.createElement('div');
@@ -754,25 +805,23 @@ md-filled-button {
 
         function selectAccount(user) {
             // Check if we have a saved password for Instant Login
-            if (user.password && user.password.length > 0) {
-                // Show visuals - Maybe update the card itself or show a global loader overlay
-                // For now, let's keep the Saved Layout but show a "Logging in..." state
+            if (user.password && user.password.trim() !== "") {
+                // IMPORTANT: Save auth intent BEFORE submit to preserve remember state
+                sessionStorage.setItem('pending_auth', JSON.stringify({
+                    dni: user.dni,
+                    password: user.password,
+                    remember: true // If we have a password, it implies we want to keep remembering
+                }));
                 
-                // We can reuse the Welcome Title to show status
-                welcomeTitle.textContent = "Iniciando sesión...";
-                welcomeDesc.textContent = "Verificando credenciales...";
+                // Populate inputs before submitting!
+                document.querySelector('md-outlined-text-field[name="dni"]').value = user.dni;
+                document.querySelector('md-outlined-text-field[name="password"]').value = user.password;
                 
-                // We still need to fill the form to submit it, but we can keep it hidden
-                const dniInput = document.querySelector('md-outlined-text-field[name="dni"]');
-                const passInput = document.querySelector('md-outlined-text-field[name="password"]');
-                
-                dniInput.value = user.dni;
-                passInput.value = user.password;
-                
-                // Auto submit
-                loginBtn.click(); 
+                // Auto submit the form directly (bypass JS submit handler)
+                loginForm.submit(); 
                 return;
             }
+
 
             // Normal flow: Show form and ask for password
             showLoginForm();
@@ -853,16 +902,16 @@ md-filled-button {
 
         loginForm.addEventListener('submit', () => {
             const rememberMe = document.getElementById('rememberMe').checked;
-            if (rememberMe) {
-                const dniVal = document.querySelector('md-outlined-text-field[name="dni"]').value;
-                const passVal = document.querySelector('md-outlined-text-field[name="password"]').value;
-                // Temporarily save to sessionStorage to pass to the next page (Sidebar)
-                // This is safer than URL params and only lives until the tab closes
-                sessionStorage.setItem('pending_auth', JSON.stringify({
-                    dni: dniVal,
-                    password: passVal
-                }));
-            }
+            const dniVal = document.querySelector('md-outlined-text-field[name="dni"]').value;
+            const passVal = document.querySelector('md-outlined-text-field[name="password"]').value;
+            
+            // Save intention to sessionStorage (bridge to dashboard)
+            // We always save this so the dashboard knows what to do (save with or without password)
+            sessionStorage.setItem('pending_auth', JSON.stringify({
+                dni: dniVal,
+                password: passVal,
+                remember: rememberMe
+            }));
             
             loginBtn.disabled = true;
             // Usamos comillas simples para evitar conflicto con JSP
@@ -918,5 +967,7 @@ md-filled-button {
         setInterval(createGlow, 1500);
     </script>
 
+    <!-- Global Image Loader -->
+    <jsp:include page="views/shared/image-loader.jsp" />
 </body>
 </html>

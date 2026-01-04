@@ -1,19 +1,25 @@
 package com.grupoperuana.sistema.controllers;
 
 import com.grupoperuana.sistema.dto.ReporteAsistenciaDTO;
+import com.grupoperuana.sistema.dto.ReporteResumenDTO;
 import com.grupoperuana.sistema.services.EmpleadoService;
 import com.grupoperuana.sistema.services.ReporteService;
 import com.grupoperuana.sistema.services.SucursalService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
 
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -33,63 +39,102 @@ public class ReporteController {
     @Autowired
     private SucursalService sucursalService;
 
-    @GetMapping("/calculo")
-    public String verReporte(@RequestParam(value = "fechaInicio", required = false) LocalDate fechaInicio,
+    // --- 1. REPORTE DE CÁLCULO (ASISTENCIA DETALLADA) ---
+
+    @PostMapping("/calculo")
+    public String filtrarCalculo(
+            @RequestParam(value = "fechaInicio", required = false) LocalDate fechaInicio,
             @RequestParam(value = "fechaFin", required = false) LocalDate fechaFin,
             @RequestParam(value = "empleadoId", required = false) Integer empleadoId,
             @RequestParam(value = "sucursalId", required = false) Integer sucursalId,
             @RequestParam(value = "sort", required = false, defaultValue = "fecha_desc") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            Model model) {
+            HttpSession session) {
 
-        // Cargar listas para filtros
+        session.setAttribute("rep_calc_fechaInicio", fechaInicio);
+        session.setAttribute("rep_calc_fechaFin", fechaFin);
+        session.setAttribute("rep_calc_empleadoId", empleadoId);
+        session.setAttribute("rep_calc_sucursalId", sucursalId);
+        session.setAttribute("rep_calc_sort", sort);
+        session.setAttribute("rep_calc_page", page);
+        session.setAttribute("rep_calc_size", size);
+
+        return "redirect:/reportes/calculo";
+    }
+
+    @GetMapping("/calculo")
+    public String verReporte(
+            @RequestParam(value = "fechaInicio", required = false) LocalDate reqInicio,
+            @RequestParam(value = "fechaFin", required = false) LocalDate reqFin,
+            Model model, HttpSession session) {
+
+        // Legacy/Direct Link Support: If params in URL, save and redirect
+        if (reqInicio != null || reqFin != null) {
+            if (reqInicio != null)
+                session.setAttribute("rep_calc_fechaInicio", reqInicio);
+            if (reqFin != null)
+                session.setAttribute("rep_calc_fechaFin", reqFin);
+            return "redirect:/reportes/calculo";
+        }
+
+        // Recover from Session or Default
+        LocalDate fechaInicio = (LocalDate) session.getAttribute("rep_calc_fechaInicio");
+        LocalDate fechaFin = (LocalDate) session.getAttribute("rep_calc_fechaFin");
+        Integer empleadoId = (Integer) session.getAttribute("rep_calc_empleadoId");
+        Integer sucursalId = (Integer) session.getAttribute("rep_calc_sucursalId");
+        String sort = (String) session.getAttribute("rep_calc_sort");
+        if (sort == null)
+            sort = "fecha_desc";
+
+        Integer pageObj = (Integer) session.getAttribute("rep_calc_page");
+        int page = (pageObj != null) ? pageObj : 0;
+
+        Integer sizeObj = (Integer) session.getAttribute("rep_calc_size");
+        int size = (sizeObj != null) ? sizeObj : 10;
+
+        // Load Filters
         try {
             model.addAttribute("empleados", empleadoService.listarEmpleados());
             model.addAttribute("sucursales", sucursalService.listarTodas());
         } catch (Throwable e) {
-            System.out.println("ERROR DEBUG: " + e.getMessage());
-            e.printStackTrace();
             model.addAttribute("error", "Error cargando filtros: " + e.getMessage());
-            model.addAttribute("empleados", List.of());
-            model.addAttribute("sucursales", List.of());
         }
 
+        // Defaults if still null
+        if (fechaInicio == null)
+            fechaInicio = LocalDate.now().withDayOfMonth(1);
+        if (fechaFin == null)
+            fechaFin = LocalDate.now();
+
+        // Save back defaults to session to be consistent
+        session.setAttribute("rep_calc_fechaInicio", fechaInicio);
+        session.setAttribute("rep_calc_fechaFin", fechaFin);
+
         try {
-            if (fechaInicio != null && fechaFin != null) {
-                // Fetch FULL list (service filtered and sorted)
-                List<ReporteAsistenciaDTO> fullReporte = reporteService.generarReporte(fechaInicio, fechaFin,
-                        empleadoId, sucursalId, sort);
+            List<ReporteAsistenciaDTO> fullReporte = reporteService.generarReporte(fechaInicio, fechaFin,
+                    empleadoId, sucursalId, sort);
 
-                // Pagination Logic (In-Memory Slicing)
-                int start = Math.min((int) org.springframework.data.domain.PageRequest.of(page, size).getOffset(),
-                        fullReporte.size());
-                int end = Math.min((start + size), fullReporte.size());
+            // Pagination
+            int start = Math.min(page * size, fullReporte.size());
+            int end = Math.min((start + size), fullReporte.size());
+            List<ReporteAsistenciaDTO> pageContent = fullReporte.subList(start, end);
 
-                List<ReporteAsistenciaDTO> pageContent = fullReporte.subList(start, end);
+            org.springframework.data.domain.Page<ReporteAsistenciaDTO> pageResponse = new org.springframework.data.domain.PageImpl<>(
+                    pageContent, org.springframework.data.domain.PageRequest.of(page, size), fullReporte.size());
 
-                org.springframework.data.domain.Page<ReporteAsistenciaDTO> pageResponse = new org.springframework.data.domain.PageImpl<>(
-                        pageContent, org.springframework.data.domain.PageRequest.of(page, size), fullReporte.size());
+            model.addAttribute("reporte", pageContent);
+            model.addAttribute("pagina", pageResponse);
 
-                model.addAttribute("reporte", pageContent);
-                model.addAttribute("pagina", pageResponse);
+            // Pass vars to view
+            model.addAttribute("fechaInicio", fechaInicio);
+            model.addAttribute("fechaFin", fechaFin);
+            model.addAttribute("empleadoId", empleadoId);
+            model.addAttribute("sucursalId", sucursalId);
+            model.addAttribute("sort", sort);
+            model.addAttribute("size", size);
 
-                model.addAttribute("fechaInicio", fechaInicio);
-                model.addAttribute("fechaFin", fechaFin);
-                model.addAttribute("empleadoId", empleadoId);
-                model.addAttribute("sucursalId", sucursalId);
-                model.addAttribute("sort", sort);
-                model.addAttribute("size", size);
-
-            } else {
-                // Default values for form: today (start of month to now)
-                model.addAttribute("fechaInicio", LocalDate.now().withDayOfMonth(1));
-                model.addAttribute("fechaFin", LocalDate.now());
-                model.addAttribute("size", size);
-                model.addAttribute("sort", "fecha_desc");
-            }
         } catch (Throwable e) {
-            System.out.println("ERROR DEBUG: " + e.getMessage());
             e.printStackTrace();
             model.addAttribute("error", "Error generando reporte: " + e.getMessage());
         }
@@ -98,18 +143,19 @@ public class ReporteController {
     }
 
     @GetMapping("/exportar/excel")
-    public ResponseEntity<InputStreamResource> exportarExcel(
-            @RequestParam(value = "fechaInicio", required = false) LocalDate fechaInicio,
-            @RequestParam(value = "fechaFin", required = false) LocalDate fechaFin,
-            @RequestParam(value = "empleadoId", required = false) Integer empleadoId) {
+    public ResponseEntity<InputStreamResource> exportarExcel(HttpSession session) {
+        LocalDate fechaInicio = (LocalDate) session.getAttribute("rep_calc_fechaInicio");
+        LocalDate fechaFin = (LocalDate) session.getAttribute("rep_calc_fechaFin");
+        Integer empleadoId = (Integer) session.getAttribute("rep_calc_empleadoId");
+        Integer sucursalId = (Integer) session.getAttribute("rep_calc_sucursalId");
 
         if (fechaInicio == null)
             fechaInicio = LocalDate.now().withDayOfMonth(1);
         if (fechaFin == null)
             fechaFin = LocalDate.now();
 
-        List<ReporteAsistenciaDTO> reporte = reporteService.generarReporte(fechaInicio, fechaFin, empleadoId, null,
-                null);
+        List<ReporteAsistenciaDTO> reporte = reporteService.generarReporte(fechaInicio, fechaFin, empleadoId,
+                sucursalId, null);
         ByteArrayInputStream in = reporteService.generarReporteExcel(reporte);
 
         HttpHeaders headers = new HttpHeaders();
@@ -122,18 +168,19 @@ public class ReporteController {
     }
 
     @GetMapping("/exportar/pdf")
-    public ResponseEntity<InputStreamResource> exportarPDF(
-            @RequestParam(value = "fechaInicio", required = false) LocalDate fechaInicio,
-            @RequestParam(value = "fechaFin", required = false) LocalDate fechaFin,
-            @RequestParam(value = "empleadoId", required = false) Integer empleadoId) {
+    public ResponseEntity<InputStreamResource> exportarPDF(HttpSession session) {
+        LocalDate fechaInicio = (LocalDate) session.getAttribute("rep_calc_fechaInicio");
+        LocalDate fechaFin = (LocalDate) session.getAttribute("rep_calc_fechaFin");
+        Integer empleadoId = (Integer) session.getAttribute("rep_calc_empleadoId");
+        Integer sucursalId = (Integer) session.getAttribute("rep_calc_sucursalId");
 
         if (fechaInicio == null)
             fechaInicio = LocalDate.now().withDayOfMonth(1);
         if (fechaFin == null)
             fechaFin = LocalDate.now();
 
-        List<ReporteAsistenciaDTO> reporte = reporteService.generarReporte(fechaInicio, fechaFin, empleadoId, null,
-                null);
+        List<ReporteAsistenciaDTO> reporte = reporteService.generarReporte(fechaInicio, fechaFin, empleadoId,
+                sucursalId, null);
         ByteArrayInputStream in = reporteService.generarReportePDF(reporte);
 
         HttpHeaders headers = new HttpHeaders();
@@ -145,98 +192,78 @@ public class ReporteController {
                 .body(new InputStreamResource(in));
     }
 
-    @GetMapping("/horas")
-    public String verReporteHoras(@RequestParam(value = "fechaInicio", required = false) LocalDate fechaInicio,
+    // --- 2. REPORTE DE HORAS (RESUMEN) ---
+
+    @PostMapping("/horas")
+    public String filtrarHoras(
+            @RequestParam(value = "fechaInicio", required = false) LocalDate fechaInicio,
             @RequestParam(value = "fechaFin", required = false) LocalDate fechaFin,
             @RequestParam(value = "sucursalId", required = false) Integer sucursalId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            Model model) {
+            HttpSession session) {
 
-        // Cargar listas para filtros
+        session.setAttribute("rep_hrs_fechaInicio", fechaInicio);
+        session.setAttribute("rep_hrs_fechaFin", fechaFin);
+        session.setAttribute("rep_hrs_sucursalId", sucursalId);
+        session.setAttribute("rep_hrs_page", page);
+        session.setAttribute("rep_hrs_size", size);
+
+        return "redirect:/reportes/horas";
+    }
+
+    @GetMapping("/horas")
+    public String verReporteHoras(
+            @RequestParam(value = "fechaInicio", required = false) LocalDate reqInicio,
+            Model model, HttpSession session) {
+
+        if (reqInicio != null) {
+            session.setAttribute("rep_hrs_fechaInicio", reqInicio);
+            return "redirect:/reportes/horas";
+        }
+
+        LocalDate fechaInicio = (LocalDate) session.getAttribute("rep_hrs_fechaInicio");
+        LocalDate fechaFin = (LocalDate) session.getAttribute("rep_hrs_fechaFin");
+        Integer sucursalId = (Integer) session.getAttribute("rep_hrs_sucursalId");
+        Integer pageObj = (Integer) session.getAttribute("rep_hrs_page");
+        int page = (pageObj != null) ? pageObj : 0;
+        Integer sizeObj = (Integer) session.getAttribute("rep_hrs_size");
+        int size = (sizeObj != null) ? sizeObj : 10;
+
         try {
             model.addAttribute("sucursales", sucursalService.listarTodas());
         } catch (Throwable e) {
             model.addAttribute("sucursales", List.of());
         }
 
+        if (fechaInicio == null)
+            fechaInicio = LocalDate.now().withDayOfMonth(1);
+        if (fechaFin == null)
+            fechaFin = LocalDate.now();
+
+        // Save defaults
+        session.setAttribute("rep_hrs_fechaInicio", fechaInicio);
+        session.setAttribute("rep_hrs_fechaFin", fechaFin);
+
         try {
-            if (fechaInicio != null && fechaFin != null) {
-                // Fetch daily report for all employees (filtered by sucursal if needed)
-                List<ReporteAsistenciaDTO> dailyReport = reporteService.generarReporte(fechaInicio, fechaFin, null,
-                        sucursalId, null);
+            List<ReporteAsistenciaDTO> dailyReport = reporteService.generarReporte(fechaInicio, fechaFin, null,
+                    sucursalId, null);
+            List<ReporteResumenDTO> resumen = agruparResumen(dailyReport);
 
-                // Aggregate by Employee
-                java.util.Map<String, com.grupoperuana.sistema.dto.ReporteResumenDTO> resumenMap = new java.util.HashMap<>();
+            // Pagination
+            int start = Math.min(page * size, resumen.size());
+            int end = Math.min((start + size), resumen.size());
+            List<ReporteResumenDTO> pageContent = resumen.subList(start, end);
 
-                for (ReporteAsistenciaDTO row : dailyReport) {
-                    String dni = row.getDniEmpleado();
-                    if (dni == null)
-                        continue;
+            org.springframework.data.domain.Page<ReporteResumenDTO> pageResponse = new org.springframework.data.domain.PageImpl<>(
+                    pageContent, org.springframework.data.domain.PageRequest.of(page, size), resumen.size());
 
-                    com.grupoperuana.sistema.dto.ReporteResumenDTO res = resumenMap.get(dni);
-                    if (res == null) {
-                        res = new com.grupoperuana.sistema.dto.ReporteResumenDTO();
-                        res.setDniEmpleado(dni);
-                        res.setNombreEmpleado(row.getNombreEmpleado());
-                        res.setSucursal(row.getSucursal());
-                        resumenMap.put(dni, res);
-                    }
-
-                    // Accumulate
-                    res.setTotalHorasProgramadas(res.getTotalHorasProgramadas() + row.getHorasProgramadas());
-                    res.setTotalHorasTrabajadas(res.getTotalHorasTrabajadas() + row.getHorasTrabajadas());
-
-                    double diff = row.getDiferenciaHoras();
-                    if (diff > 0) {
-                        res.setTotalHorasExtras(res.getTotalHorasExtras() + diff);
-                    } else {
-                        res.setTotalHorasDeuda(res.getTotalHorasDeuda() + Math.abs(diff));
-                    }
-
-                    res.setTotalMinutosTardanza(res.getTotalMinutosTardanza() + row.getMinutosTardanza());
-
-                    String estado = row.getEstado();
-                    if ("ASISTIO".equals(estado) || "TARDANZA".equals(estado) || "EXTRA".equals(estado)
-                            || "FERIADO LABORADO".equals(estado)) {
-                        res.setDiasAsistidos(res.getDiasAsistidos() + 1);
-                    } else if ("FALTA".equals(estado)) {
-                        res.setDiasFaltas(res.getDiasFaltas() + 1);
-                    }
-
-                    if ("FERIADO LABORADO".equals(estado)) {
-                        res.setDiasFeriadosLaborados(res.getDiasFeriadosLaborados() + 1);
-                    }
-                }
-
-                List<com.grupoperuana.sistema.dto.ReporteResumenDTO> fullList = new java.util.ArrayList<>(
-                        resumenMap.values());
-
-                // Sort by name
-                fullList.sort((a, b) -> a.getNombreEmpleado().compareToIgnoreCase(b.getNombreEmpleado()));
-
-                // Pagination
-                int start = Math.min((int) org.springframework.data.domain.PageRequest.of(page, size).getOffset(),
-                        fullList.size());
-                int end = Math.min((start + size), fullList.size());
-
-                List<com.grupoperuana.sistema.dto.ReporteResumenDTO> pageContent = fullList.subList(start, end);
-
-                org.springframework.data.domain.Page<com.grupoperuana.sistema.dto.ReporteResumenDTO> pageResponse = new org.springframework.data.domain.PageImpl<>(
-                        pageContent, org.springframework.data.domain.PageRequest.of(page, size), fullList.size());
-
-                model.addAttribute("reporte", pageContent);
-                model.addAttribute("pagina", pageResponse);
-                model.addAttribute("fechaInicio", fechaInicio);
-                model.addAttribute("fechaFin", fechaFin);
-                model.addAttribute("sucursalId", sucursalId);
-                model.addAttribute("size", size);
-
-            } else {
-                model.addAttribute("fechaInicio", LocalDate.now().withDayOfMonth(1));
-                model.addAttribute("fechaFin", LocalDate.now());
-                model.addAttribute("size", size);
-            }
+            model.addAttribute("reporte", pageContent);
+            model.addAttribute("pagina", pageResponse);
+            model.addAttribute("fechaInicio", fechaInicio);
+            model.addAttribute("fechaFin", fechaFin);
+            model.addAttribute("sucursalId", sucursalId);
+            model.addAttribute("size", size);
 
         } catch (Throwable e) {
             e.printStackTrace();
@@ -246,102 +273,78 @@ public class ReporteController {
         return "views/reportes/reporte_horas";
     }
 
-    @GetMapping("/puntualidad")
-    public String verReportePuntualidad(@RequestParam(value = "fechaInicio", required = false) LocalDate fechaInicio,
+    // --- 3. REPORTE DE PUNTUALIDAD ---
+
+    @PostMapping("/puntualidad")
+    public String filtrarPuntualidad(
+            @RequestParam(value = "fechaInicio", required = false) LocalDate fechaInicio,
             @RequestParam(value = "fechaFin", required = false) LocalDate fechaFin,
             @RequestParam(value = "sucursalId", required = false) Integer sucursalId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            Model model) {
+            HttpSession session) {
 
-        // Cargar listas para filtros
+        session.setAttribute("rep_pun_fechaInicio", fechaInicio);
+        session.setAttribute("rep_pun_fechaFin", fechaFin);
+        session.setAttribute("rep_pun_sucursalId", sucursalId);
+        session.setAttribute("rep_pun_page", page);
+        session.setAttribute("rep_pun_size", size);
+
+        return "redirect:/reportes/puntualidad";
+    }
+
+    @GetMapping("/puntualidad")
+    public String verReportePuntualidad(
+            @RequestParam(value = "fechaInicio", required = false) LocalDate reqInicio,
+            Model model, HttpSession session) {
+
+        if (reqInicio != null) {
+            session.setAttribute("rep_pun_fechaInicio", reqInicio);
+            return "redirect:/reportes/puntualidad";
+        }
+
+        LocalDate fechaInicio = (LocalDate) session.getAttribute("rep_pun_fechaInicio");
+        LocalDate fechaFin = (LocalDate) session.getAttribute("rep_pun_fechaFin");
+        Integer sucursalId = (Integer) session.getAttribute("rep_pun_sucursalId");
+        Integer pageObj = (Integer) session.getAttribute("rep_pun_page");
+        int page = (pageObj != null) ? pageObj : 0;
+        Integer sizeObj = (Integer) session.getAttribute("rep_pun_size");
+        int size = (sizeObj != null) ? sizeObj : 10;
+
         try {
             model.addAttribute("sucursales", sucursalService.listarTodas());
         } catch (Throwable e) {
             model.addAttribute("sucursales", List.of());
         }
 
+        if (fechaInicio == null)
+            fechaInicio = LocalDate.now().withDayOfMonth(1);
+        if (fechaFin == null)
+            fechaFin = LocalDate.now();
+
+        // Save defaults
+        session.setAttribute("rep_pun_fechaInicio", fechaInicio);
+        session.setAttribute("rep_pun_fechaFin", fechaFin);
+
         try {
-            if (fechaInicio != null && fechaFin != null) {
-                // Fetch daily report for all employees (filtered by sucursal if needed)
-                List<ReporteAsistenciaDTO> dailyReport = reporteService.generarReporte(fechaInicio, fechaFin, null,
-                        sucursalId, null);
+            List<ReporteAsistenciaDTO> dailyReport = reporteService.generarReporte(fechaInicio, fechaFin, null,
+                    sucursalId, null);
+            List<ReporteResumenDTO> resumen = agruparResumen(dailyReport);
 
-                // Aggregate by Employee
-                java.util.Map<String, com.grupoperuana.sistema.dto.ReporteResumenDTO> resumenMap = new java.util.HashMap<>();
+            // Pagination
+            int start = Math.min(page * size, resumen.size());
+            int end = Math.min((start + size), resumen.size());
+            List<ReporteResumenDTO> pageContent = resumen.subList(start, end);
 
-                for (ReporteAsistenciaDTO row : dailyReport) {
-                    String dni = row.getDniEmpleado();
-                    if (dni == null)
-                        continue;
+            org.springframework.data.domain.Page<ReporteResumenDTO> pageResponse = new org.springframework.data.domain.PageImpl<>(
+                    pageContent, org.springframework.data.domain.PageRequest.of(page, size), resumen.size());
 
-                    com.grupoperuana.sistema.dto.ReporteResumenDTO res = resumenMap.get(dni);
-                    if (res == null) {
-                        res = new com.grupoperuana.sistema.dto.ReporteResumenDTO();
-                        res.setDniEmpleado(dni);
-                        res.setNombreEmpleado(row.getNombreEmpleado());
-                        res.setSucursal(row.getSucursal());
-                        resumenMap.put(dni, res);
-                    }
-
-                    // Accumulate
-                    res.setTotalHorasProgramadas(res.getTotalHorasProgramadas() + row.getHorasProgramadas());
-                    res.setTotalHorasTrabajadas(res.getTotalHorasTrabajadas() + row.getHorasTrabajadas());
-
-                    double diff = row.getDiferenciaHoras();
-                    if (diff > 0) {
-                        res.setTotalHorasExtras(res.getTotalHorasExtras() + diff);
-                    } else {
-                        res.setTotalHorasDeuda(res.getTotalHorasDeuda() + Math.abs(diff));
-                    }
-
-                    res.setTotalMinutosTardanza(res.getTotalMinutosTardanza() + row.getMinutosTardanza());
-
-                    String estado = row.getEstado();
-                    if ("ASISTIO".equals(estado) || "TARDANZA".equals(estado) || "EXTRA".equals(estado)
-                            || "FERIADO LABORADO".equals(estado)) {
-                        res.setDiasAsistidos(res.getDiasAsistidos() + 1);
-                    } else if ("FALTA".equals(estado)) {
-                        res.setDiasFaltas(res.getDiasFaltas() + 1);
-                    }
-
-                    if ("TARDANZA".equals(estado)) {
-                        res.setCantidadTardanzas(res.getCantidadTardanzas() + 1);
-                    }
-
-                    if ("FERIADO LABORADO".equals(estado)) {
-                        res.setDiasFeriadosLaborados(res.getDiasFeriadosLaborados() + 1);
-                    }
-                }
-
-                List<com.grupoperuana.sistema.dto.ReporteResumenDTO> fullList = new java.util.ArrayList<>(
-                        resumenMap.values());
-
-                // Sort by name
-                fullList.sort((a, b) -> a.getNombreEmpleado().compareToIgnoreCase(b.getNombreEmpleado()));
-
-                // Pagination
-                int start = Math.min((int) org.springframework.data.domain.PageRequest.of(page, size).getOffset(),
-                        fullList.size());
-                int end = Math.min((start + size), fullList.size());
-
-                List<com.grupoperuana.sistema.dto.ReporteResumenDTO> pageContent = fullList.subList(start, end);
-
-                org.springframework.data.domain.Page<com.grupoperuana.sistema.dto.ReporteResumenDTO> pageResponse = new org.springframework.data.domain.PageImpl<>(
-                        pageContent, org.springframework.data.domain.PageRequest.of(page, size), fullList.size());
-
-                model.addAttribute("reporte", pageContent);
-                model.addAttribute("pagina", pageResponse);
-                model.addAttribute("fechaInicio", fechaInicio);
-                model.addAttribute("fechaFin", fechaFin);
-                model.addAttribute("sucursalId", sucursalId);
-                model.addAttribute("size", size);
-
-            } else {
-                model.addAttribute("fechaInicio", LocalDate.now().withDayOfMonth(1));
-                model.addAttribute("fechaFin", LocalDate.now());
-                model.addAttribute("size", size);
-            }
+            model.addAttribute("reporte", pageContent);
+            model.addAttribute("pagina", pageResponse);
+            model.addAttribute("fechaInicio", fechaInicio);
+            model.addAttribute("fechaFin", fechaFin);
+            model.addAttribute("sucursalId", sucursalId);
+            model.addAttribute("size", size);
 
         } catch (Throwable e) {
             e.printStackTrace();
@@ -349,5 +352,56 @@ public class ReporteController {
         }
 
         return "views/reportes/reporte_puntualidad";
+    }
+
+    // Helper logic extracted from previous controller for aggregation
+    private List<ReporteResumenDTO> agruparResumen(List<ReporteAsistenciaDTO> dailyReport) {
+        Map<String, ReporteResumenDTO> resumenMap = new HashMap<>();
+
+        for (ReporteAsistenciaDTO row : dailyReport) {
+            String dni = row.getDniEmpleado();
+            if (dni == null)
+                continue;
+
+            ReporteResumenDTO res = resumenMap.get(dni);
+            if (res == null) {
+                res = new ReporteResumenDTO();
+                res.setDniEmpleado(dni);
+                res.setNombreEmpleado(row.getNombreEmpleado());
+                res.setSucursal(row.getSucursal());
+                resumenMap.put(dni, res);
+            }
+
+            res.setTotalHorasProgramadas(res.getTotalHorasProgramadas() + row.getHorasProgramadas());
+            res.setTotalHorasTrabajadas(res.getTotalHorasTrabajadas() + row.getHorasTrabajadas());
+
+            double diff = row.getDiferenciaHoras();
+            if (diff > 0) {
+                res.setTotalHorasExtras(res.getTotalHorasExtras() + diff);
+            } else {
+                res.setTotalHorasDeuda(res.getTotalHorasDeuda() + Math.abs(diff));
+            }
+
+            res.setTotalMinutosTardanza(res.getTotalMinutosTardanza() + row.getMinutosTardanza());
+
+            String estado = row.getEstado();
+            if ("ASISTIO".equals(estado) || "TARDANZA".equals(estado) || "EXTRA".equals(estado)
+                    || "FERIADO LABORADO".equals(estado)) {
+                res.setDiasAsistidos(res.getDiasAsistidos() + 1);
+            } else if ("FALTA".equals(estado)) {
+                res.setDiasFaltas(res.getDiasFaltas() + 1);
+            }
+
+            if ("TARDANZA".equals(estado)) {
+                res.setCantidadTardanzas(res.getCantidadTardanzas() + 1);
+            }
+            if ("FERIADO LABORADO".equals(estado)) {
+                res.setDiasFeriadosLaborados(res.getDiasFeriadosLaborados() + 1);
+            }
+        }
+
+        List<ReporteResumenDTO> fullList = new ArrayList<>(resumenMap.values());
+        fullList.sort((a, b) -> a.getNombreEmpleado().compareToIgnoreCase(b.getNombreEmpleado()));
+        return fullList;
     }
 }

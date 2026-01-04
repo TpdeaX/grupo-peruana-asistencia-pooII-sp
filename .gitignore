@@ -5,6 +5,7 @@
 target/
 .mvn/
 *.log
+uploads/evidencias/
 
 # IDE
 .vscode/

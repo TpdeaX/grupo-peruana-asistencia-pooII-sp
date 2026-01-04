@@ -61,12 +61,16 @@
 </head>
 <body>
 
-    <jsp:include page="../shared/sidebar.jsp" />
-
-    <div class="main-content">
-        <jsp:include page="../shared/header.jsp" />
-
-        <div class="container">
+    <jsp:include page="../shared/loading-screen.jsp" />
+    <jsp:include page="../shared/console-warning.jsp" />
+    
+    <%-- Conditional Layout based on role --%>
+    <c:choose>
+        <c:when test="${sessionScope.usuario.rol == 'ADMIN' || sessionScope.usuario.rol == 'JEFE'}">
+            <jsp:include page="../shared/sidebar.jsp" />
+            <div class="main-content">
+                <jsp:include page="../shared/header.jsp" />
+                <div class="container">
             
             <!-- Alerts -->
 
@@ -96,7 +100,7 @@
 
             <!-- Advanced Filter Form -->
             <div class="card" style="margin-bottom: 24px; padding: 24px; background-color: var(--md-sys-color-surface); animation: fade-in-down 0.5s ease-out;">
-                <form id="filterForm" action="${pageContext.request.contextPath}/justificaciones" method="get">
+                <form id="filterForm" action="${pageContext.request.contextPath}/justificaciones" method="post">
                     <input type="hidden" name="page" id="pageInput" value="${pagina.number}">
                     
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start;">
@@ -650,6 +654,75 @@
                  }
             });
         </script>
-    </div>
+                </div><%-- end container --%>
+            </div><%-- end main-content --%>
+        </c:when>
+        <c:otherwise>
+            <%-- Mobile Layout for Employees --%>
+            <jsp:include page="../shared/mobile-layout.jsp" />
+            <main class="mobile-content">
+                <div class="page-header" style="margin-bottom: 20px;">
+                    <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0 0 4px 0;">Mis Justificaciones</h1>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Gestiona tus solicitudes</p>
+                </div>
+                
+                <a href="${pageContext.request.contextPath}/justificaciones/nuevo" 
+                   style="display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #EC407A 0%, #AB47BC 100%); color: white; padding: 14px 24px; border-radius: 28px; text-decoration: none; font-weight: 600; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(236, 64, 122, 0.3);">
+                    <span class="material-symbols-rounded" style="font-size: 20px;">add</span>
+                    Nueva Solicitud
+                </a>
+                
+                <c:choose>
+                    <c:when test="${empty lista}">
+                        <div style="text-align: center; padding: 48px 24px;">
+                            <span class="material-symbols-rounded" style="font-size: 64px; color: #CAC4D0;">inbox</span>
+                            <h3 style="font-size: 1.1rem; color: var(--text-primary); margin: 16px 0 8px 0;">Sin justificaciones</h3>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">No tienes solicitudes registradas</p>
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <c:forEach var="j" items="${lista}">
+                                <div style="background: var(--surface, #fff); border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid ${j.estado == 'PENDIENTE' ? '#FF9800' : j.estado == 'ACEPTADA' ? '#4CAF50' : '#F44336'};">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                        <div>
+                                            <div style="font-weight: 600; color: var(--text-primary);">${j.fechaSolicitud}</div>
+                                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                                                ${j.fechaInicio} 
+                                                <c:if test="${j.fechaInicio != j.fechaFin}"> - ${j.fechaFin}</c:if>
+                                            </div>
+                                        </div>
+                                        <span style="padding: 4px 10px; border-radius: 16px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+                                            background: ${j.estado == 'PENDIENTE' ? 'rgba(255,152,0,0.12)' : j.estado == 'ACEPTADA' ? 'rgba(76,175,80,0.12)' : 'rgba(244,67,54,0.12)'};
+                                            color: ${j.estado == 'PENDIENTE' ? '#E65100' : j.estado == 'ACEPTADA' ? '#2E7D32' : '#C62828'};">
+                                            ${j.estado}
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                        ${j.motivo}
+                                    </div>
+                                    <c:if test="${j.estado == 'PENDIENTE'}">
+                                        <div style="display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+                                            <a href="${pageContext.request.contextPath}/justificaciones/editar/${j.id}" 
+                                               style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: rgba(236,64,122,0.1); color: #EC407A; border-radius: 12px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">
+                                                <span class="material-symbols-rounded" style="font-size: 18px;">edit</span>
+                                                Editar
+                                            </a>
+                                            <a href="${pageContext.request.contextPath}/justificaciones/eliminar/${j.id}" 
+                                               onclick="return confirm('¿Eliminar esta solicitud?');"
+                                               style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: rgba(244,67,54,0.1); color: #F44336; border-radius: 12px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">
+                                                <span class="material-symbols-rounded" style="font-size: 18px;">delete</span>
+                                                Eliminar
+                                            </a>
+                                        </div>
+                                    </c:if>
+                                </div>
+                            </c:forEach>
+                        </div>
+                    </c:otherwise>
+                </c:choose>
+            </main>
+        </c:otherwise>
+    </c:choose>
 </body>
 </html>
